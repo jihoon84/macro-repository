@@ -3,37 +3,451 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>매크로 투자 레짐 대시보드</title>
+<title>매크로 투자 레짐 대시보드 (히스토리)</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
   :root {
-    --bg: #0a0e17;
-    --surface: #111827;
-    --surface2: #1a2235;
-    --border: #1e2d45;
-    --text: #e2e8f0;
-    --muted: #64748b;
-    --green: #10b981;
-    --red: #ef4444;
-    --yellow: #f59e0b;
-    --blue: #3b82f6;
-    --purple: #8b5cf6;
-    --cyan: #06b6d4;
-    --orange: #f97316;
+    --bg:#0a0e17;--surface:#111827;--surface2:#1a2235;--border:#1e2d45;
+    --text:#e2e8f0;--muted:#64748b;--green:#10b981;--red:#ef4444;
+    --yellow:#f59e0b;--blue:#3b82f6;--cyan:#06b6d4;--orange:#f97316;--purple:#8b5cf6;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);padding:16px;min-height:100vh;}
+
+  /* 헤더 */
+  .header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+  .header h1{font-size:1.3rem;font-weight:700;}
+  .header h1 span{color:var(--cyan);}
+  .meta{font-size:0.72rem;color:var(--muted);text-align:right;}
+
+  /* 탭 */
+  .tabs{display:flex;gap:6px;margin-bottom:20px;overflow-x:auto;padding-bottom:4px;}
+  .tab{padding:7px 16px;border-radius:8px;font-size:0.75rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);white-space:nowrap;transition:all .2s;}
+  .tab.active{background:var(--cyan);color:#000;border-color:var(--cyan);}
+  .tab:hover:not(.active){background:var(--surface2);color:var(--text);}
+
+  /* 패널 */
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  /* 레짐 배너 */
+  .regime{background:linear-gradient(135deg,#1a2235,#0f1a2e);border:1px solid var(--border);border-left:4px solid;border-radius:12px;padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;gap:16px;}
+  .regime-icon{font-size:2rem;flex-shrink:0;}
+  .regime-label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;}
+  .regime-name{font-size:1.1rem;font-weight:700;margin:3px 0;}
+  .regime-desc{font-size:0.73rem;color:var(--muted);line-height:1.5;}
+
+  /* 지표 그리드 */
+  .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 14px;}
+  .card-label{font-size:0.63rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;}
+  .card-value{font-size:1.25rem;font-weight:700;line-height:1;}
+  .card-sub{font-size:0.67rem;color:var(--muted);margin-top:4px;}
+  .card-trend{font-size:0.67rem;font-weight:600;margin-top:5px;}
+  .sig{display:flex;gap:3px;margin-top:7px;}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--border);}
+  .dg{background:var(--green);box-shadow:0 0 5px var(--green);}
+  .dy{background:var(--yellow);box-shadow:0 0 5px var(--yellow);}
+  .dr{background:var(--red);box-shadow:0 0 5px var(--red);}
+
+  /* 변화 태그 */
+  .chg{font-size:0.58rem;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:4px;vertical-align:middle;}
+  .up{background:rgba(16,185,129,.2);color:var(--green);}
+  .dn{background:rgba(239,68,68,.2);color:var(--red);}
+  .nc{background:rgba(100,116,139,.2);color:var(--muted);}
+
+  /* 섹션 타이틀 */
+  .st{font-size:0.67rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:9px;margin-top:4px;}
+
+  /* 섹터 그리드 */
+  .g2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;}
+  .inv{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+  .inv-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+  .inv-name{font-size:0.82rem;font-weight:600;}
+  .ibadge{font-size:0.58rem;font-weight:700;padding:2px 7px;border-radius:20px;text-transform:uppercase;}
+  .ib-s{background:rgba(16,185,129,.15);color:var(--green);}
+  .ib-m{background:rgba(245,158,11,.15);color:var(--yellow);}
+  .ib-w{background:rgba(239,68,68,.15);color:var(--red);}
+  .ib-n{background:rgba(100,116,139,.2);color:var(--muted);}
+  .inv-r{font-size:0.69rem;color:var(--muted);line-height:1.5;}
+  .inv-e{font-size:0.65rem;color:var(--cyan);margin-top:3px;}
+
+  /* 이벤트 */
+  .ev-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;}
+  .ev-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.73rem;}
+  .ev-row:last-child{border-bottom:none;}
+  .ev-date{color:var(--muted);font-size:0.65rem;width:55px;flex-shrink:0;}
+  .ev-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .ev-name{flex:1;}
+  .ev-imp{font-size:0.63rem;font-weight:700;}
+
+  /* 알림 박스 */
+  .alert{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:9px;padding:10px 13px;margin-bottom:12px;font-size:0.72rem;color:#fca5a5;line-height:1.6;}
+  .alert strong{color:var(--red);}
+  .tip{background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);border-radius:9px;padding:10px 13px;margin-bottom:12px;font-size:0.72rem;color:#6ee7b7;line-height:1.6;}
+  .tip strong{color:var(--green);}
+
+  /* 히스토리 차트 */
+  .history-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px;}
+  .history-title{font-size:0.8rem;font-weight:600;margin-bottom:14px;}
+  .history-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:0.72rem;}
+  .history-date{width:55px;color:var(--muted);flex-shrink:0;}
+  .history-label{width:80px;flex-shrink:0;}
+  .history-bar-wrap{flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden;position:relative;}
+  .history-bar{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:6px;font-size:0.65rem;font-weight:600;color:#000;transition:width 1s ease;}
+  .history-val{width:55px;text-align:right;font-weight:600;flex-shrink:0;}
+
+  /* 주간 시황 테이블 */
+  .mkt-table{width:100%;border-collapse:collapse;font-size:0.73rem;margin-bottom:14px;}
+  .mkt-table th{background:var(--surface2);padding:8px 10px;text-align:left;font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);}
+  .mkt-table td{padding:8px 10px;border-bottom:1px solid var(--border);}
+  .mkt-table tr:last-child td{border-bottom:none;}
+  .mkt-table .card{background:transparent;border:none;padding:0;}
+
+  @media(max-width:580px){
+    .g3{grid-template-columns:1fr 1fr;}
+    .g2{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>매크로 투자 레짐 <span>대시보드</span></h1>
+    <div style="font-size:0.7rem;color:var(--muted);margin-top:2px">누적 히스토리 · 매주 데이터 추가</div>
+  </div>
+  <div class="meta">
+    <div id="nowDate"></div>
+    <div>최신: 7/14~18 반영</div>
+  </div>
+</div>
+
+<!-- 탭 -->
+<div class="tabs">
+  <div class="tab active" onclick="showPanel('latest')">📊 최신 (7/18)</div>
+  <div class="tab" onclick="showPanel('history')">📈 히스토리</div>
+  <div class="tab" onclick="showPanel('w0718')">주간 7/14~18</div>
+  <div class="tab" onclick="showPanel('w0710')">주간 7/7~11</div>
+  <div class="tab" onclick="showPanel('sector')">🎯 섹터 전략</div>
+  <div class="tab" onclick="showPanel('calendar')">📅 이벤트</div>
+</div>
+
+<!-- ===== 최신 패널 ===== -->
+<div class="panel active" id="panel-latest">
+  <div class="regime" style="border-left-color:var(--yellow)">
+    <div class="regime-icon">⚡</div>
+    <div>
+      <div class="regime-label">현재 매크로 레짐 · 2026년 7월 3주차</div>
+      <div class="regime-name" style="color:var(--yellow)">디스인플레이션 가속 + 기술주→가치주 순환매</div>
+      <div class="regime-desc">CPI 3.5%(예상 하회) + PPI -0.3% 연속 서프라이즈. 빅테크·반도체에서 헬스케어·금융·에너지로 순환매 진행. CXMT IPO 메모리 과점 우려. 7/28~29 FOMC가 하반기 방향 결정.</div>
+    </div>
+  </div>
+
+  <div class="st">📊 핵심 매크로 지표</div>
+  <div class="g3">
+    <div class="card">
+      <div class="card-label">CPI (6월) <span class="chg up">↓개선</span></div>
+      <div class="card-value" style="color:var(--green)">3.5%</div>
+      <div class="card-sub">전월 4.2% → 빠른 냉각</div>
+      <div class="card-trend" style="color:var(--green)">예상(3.8%) 대폭 하회</div>
+      <div class="sig"><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-label">PPI (6월) <span class="chg up">↓개선</span></div>
+      <div class="card-value" style="color:var(--green)">-0.3%</div>
+      <div class="card-sub">2개월 연속 서프라이즈</div>
+      <div class="card-trend" style="color:var(--green)">인플레 냉각 가속 확인</div>
+      <div class="sig"><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Fed 금리 <span class="chg nc">→유지</span></div>
+      <div class="card-value" style="color:var(--yellow)">3.50~3.75%</div>
+      <div class="card-sub">7/28 동결 68.5% 반영</div>
+      <div class="card-trend" style="color:var(--yellow)">워시 의장 물가우선 강조</div>
+      <div class="sig"><div class="dot dy"></div><div class="dot dy"></div><div class="dot dy"></div><div class="dot"></div><div class="dot"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-label">10년물 금리 <span class="chg up">↓하락</span></div>
+      <div class="card-value" style="color:var(--green)">4.42%</div>
+      <div class="card-sub">CPI 후 4.57%→4.42%</div>
+      <div class="card-trend" style="color:var(--green)">금리 하락 기대 재부각</div>
+      <div class="sig"><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot"></div><div class="dot"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-label">VIX <span class="chg up">↓개선</span></div>
+      <div class="card-value" style="color:var(--green)">16.5</div>
+      <div class="card-sub">전주 22.3→16.5 급락</div>
+      <div class="card-trend" style="color:var(--green)">공포 대폭 완화</div>
+      <div class="sig"><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-label">WTI 유가 <span class="chg up">↓하락</span></div>
+      <div class="card-value" style="color:var(--yellow)">$71</div>
+      <div class="card-sub">이란 협상 진전 반영</div>
+      <div class="card-trend" style="color:var(--yellow)">지정학 리스크 소폭 완화</div>
+      <div class="sig"><div class="dot dy"></div><div class="dot dy"></div><div class="dot dy"></div><div class="dot"></div><div class="dot"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-label">GDP (1Q26) <span class="chg nc">→유지</span></div>
+      <div class="card-value" style="color:var(--blue)">+2.1%</div>
+      <div class="card-sub">침체 아님, 둔화 중</div>
+      <div class="card-trend" style="color:var(--blue)">소비·투자 견조 유지</div>
+      <div class="sig"><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot"></div><div class="dot"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-label">고용 (6월 NFP) <span class="chg dn">↓악화</span></div>
+      <div class="card-value" style="color:var(--red)">57K</div>
+      <div class="card-sub">예상 113K → 절반</div>
+      <div class="card-trend" style="color:var(--red)">노동시장 냉각 신호</div>
+      <div class="sig"><div class="dot dr"></div><div class="dot dr"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-label">ISM PMI <span class="chg nc">→유지</span></div>
+      <div class="card-value" style="color:var(--blue)">53.2</div>
+      <div class="card-sub">50 이상 = 경기 확장</div>
+      <div class="card-trend" style="color:var(--blue)">서비스 경제 견조</div>
+      <div class="sig"><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot"></div><div class="dot"></div></div>
+    </div>
+  </div>
+
+  <div class="tip"><strong>✅ 이번 주 긍정:</strong> CPI·PPI 연속 서프라이즈. 빅뱅크 90% 어닝 상회. TSMC 역대 최고 매출. VIX 22→16 급락. 워시 의장 7월 인상 사실상 배제.</div>
+  <div class="alert"><strong>⚠️ 이번 주 리스크:</strong> 중국 CXMT 14조 IPO → 메모리 과점 우려 재점화. 반도체 섹터 순환매 소외. TSMC 호실적에도 반도체 역설적 하락.</div>
+</div>
+
+<!-- ===== 히스토리 패널 ===== -->
+<div class="panel" id="panel-history">
+  <div class="st">📈 주요 지표 주간 변화 추이</div>
+
+  <div class="history-card">
+    <div class="history-title">📊 CPI 추이 (YoY %)</div>
+    <div class="history-row">
+      <div class="history-date">5월초</div>
+      <div class="history-label" style="color:var(--red)">4.2%</div>
+      <div class="history-bar-wrap"><div class="history-bar" id="cpi1" style="width:0%;background:var(--red)">4.2%</div></div>
+    </div>
+    <div class="history-row">
+      <div class="history-date">6월초</div>
+      <div class="history-label" style="color:var(--orange)">4.2%</div>
+      <div class="history-bar-wrap"><div class="history-bar" id="cpi2" style="width:0%;background:var(--orange)">4.2%</div></div>
+    </div>
+    <div class="history-row">
+      <div class="history-date">7/7</div>
+      <div class="history-label" style="color:var(--yellow)">3.8% (예상)</div>
+      <div class="history-bar-wrap"><div class="history-bar" id="cpi3" style="width:0%;background:var(--yellow)">3.8%</div></div>
+    </div>
+    <div class="history-row">
+      <div class="history-date">7/14 ✅</div>
+      <div class="history-label" style="color:var(--green)">3.5% 실제</div>
+      <div class="history-bar-wrap"><div class="history-bar" id="cpi4" style="width:0%;background:var(--green)">3.5%</div></div>
+    </div>
+  </div>
+
+  <div class="history-card">
+    <div class="history-title">📊 10년물 금리 추이 (%)</div>
+    <div class="history-row">
+      <div class="history-date">6월말</div>
+      <div class="history-label" style="color:var(--red)">4.65%</div>
+      <div class="history-bar-wrap"><div class="history-bar" id="y1" style="width:0%;background:var(--red)">4.65%</div></div>
+    </div>
+    <div class="history-row">
+      <div class="history-date">7/7</div>
+      <div class="history-label" style="color:var(--orange)">4.57%</div>
+      <div class="history-bar-wrap"><div class="history-bar" id="y2" style="width:0%;background:var(--orange)">4.57%</div></div>
+    </div>
+    <div class="history-row">
+      <div class="history-date">7/14 CPI후</div>
+      <div class="history-label" style="color:var(--yellow)">4.48%</div>
+      <div class="history-bar-wrap"><div class="history-bar" id="y3" style="width:0%;background:var(--yellow)">4.48%</div></div>
+    </div>
+    <div class="history-row">
+      <div class="history-date">7/18 ✅</div>
+      <div class="history-label" style="color:var(--green)">4.42%</div>
+      <div class="history-bar-wrap"><div class="history-bar" id="y4" style="width:0%;background:var(--green)">4.42%</div></div>
+    </div>
+  </div>
+
+  <div class="history-card">
+    <div class="history-title">📊 VIX (공포지수) 추이</div>
+    <div class="history-row">
+      <div class="history-date">7/7</div>
+      <div class="history-label" style="color:var(--yellow)">19.5</div>
+      <div class="history-bar-wrap"><div class="history-bar" id="v1" style="width:0%;background:var(--yellow)">19.5</div></div>
+    </div>
+    <div class="history-row">
+      <div class="history-date">7/13 급락</div>
+      <div class="history-label" style="color:var(--red)">22.3 ↑</div>
+      <div class="history-bar-wrap"><div class="history-bar" id="v2" style="width:0%;background:var(--red)">22.3</div></div>
+    </div>
+    <div class="history-row">
+      <div class="history-date">7/14 CPI</div>
+      <div class="history-label" style="color:var(--orange)">18.1 ↓</div>
+      <div class="history-bar-wrap"><div class="history-bar" id="v3" style="width:0%;background:var(--orange)">18.1</div></div>
+    </div>
+    <div class="history-row">
+      <div class="history-date">7/18 ✅</div>
+      <div class="history-label" style="color:var(--green)">16.5 ↓</div>
+      <div class="history-bar-wrap"><div class="history-bar" id="v4" style="width:0%;background:var(--green)">16.5</div></div>
+    </div>
+  </div>
+
+  <div class="history-card">
+    <div class="history-title">📊 코스피 주간 성과</div>
+    <div class="history-row">
+      <div class="history-date">7/7주</div>
+      <div class="history-label" style="color:var(--red)">-8.95%</div>
+      <div class="history-bar-wrap"><div class="history-bar" id="k1" style="width:0%;background:var(--red)">이란 쇼크</div></div>
+    </div>
+    <div class="history-row">
+      <div class="history-date">7/10</div>
+      <div class="history-label" style="color:var(--green)">+2.52%</div>
+      <div class="history-bar-wrap"><div class="history-bar" id="k2" style="width:0%;background:var(--green)">ADR 흥행</div></div>
+    </div>
+    <div class="history-row">
+      <div class="history-date">7/14</div>
+      <div class="history-label" style="color:var(--green)">+6.24%</div>
+      <div class="history-bar-wrap"><div class="history-bar" id="k3" style="width:0%;background:var(--green)">CPI 서프라이즈</div></div>
+    </div>
+    <div class="history-row">
+      <div class="history-date">7/16</div>
+      <div class="history-label" style="color:var(--red)">-6.74%</div>
+      <div class="history-bar-wrap"><div class="history-bar" id="k4" style="width:0%;background:var(--red)">CXMT 쇼크</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 주간 7/14~18 패널 ===== -->
+<div class="panel" id="panel-w0718">
+  <div class="st">📋 7월 14~18일 주간 시황</div>
+  <table class="mkt-table">
+    <thead><tr><th>날짜</th><th>미국 S&P500</th><th>나스닥</th><th>코스피</th><th>핵심 이슈</th></tr></thead>
+    <tbody>
+      <tr><td>7/14 화</td><td style="color:var(--green)">+0.54%</td><td style="color:var(--green)">+0.90%</td><td style="color:var(--green)">+6.24%</td><td>CPI 3.5% 서프라이즈</td></tr>
+      <tr><td>7/15 수</td><td style="color:var(--green)">+0.38%</td><td style="color:var(--green)">+0.62%</td><td style="color:var(--green)">+2.52%</td><td>PPI -0.3%, SK하이닉스 ADR 상장</td></tr>
+      <tr><td>7/16 목</td><td style="color:var(--red)">-0.25%</td><td style="color:var(--red)">-0.86%</td><td style="color:var(--red)">-6.74%</td><td>CXMT IPO 14조 쇼크</td></tr>
+      <tr><td>7/17 금</td><td colspan="4" style="color:var(--muted);text-align:center">한국 제헌절 휴장 / 미국 소폭 혼조</td></tr>
+      <tr><td><strong>주간</strong></td><td style="color:var(--green)"><strong>+0.80%</strong></td><td style="color:var(--green)"><strong>+0.50%</strong></td><td style="color:var(--red)"><strong>-1.50%</strong></td><td>롤러코스터 주간</td></tr>
+    </tbody>
+  </table>
+  <div class="tip"><strong>✅ 긍정:</strong> CPI·PPI 연속 서프라이즈. 빅뱅크 90% 어닝 상회. SK하이닉스 ADR 나스닥 데뷔 +13%. TSMC 역대 최고 매출.</div>
+  <div class="alert"><strong>⚠️ 리스크:</strong> 중국 CXMT 14조 IPO → 메모리 과점 우려. 반도체 섹터 소외. 국장 극단적 변동성(-6.74%~+6.24%) 지속.</div>
+</div>
+
+<!-- ===== 주간 7/7~11 패널 ===== -->
+<div class="panel" id="panel-w0710">
+  <div class="st">📋 7월 7~11일 주간 시황</div>
+  <table class="mkt-table">
+    <thead><tr><th>날짜</th><th>미국 S&P500</th><th>나스닥</th><th>코스피</th><th>핵심 이슈</th></tr></thead>
+    <tbody>
+      <tr><td>7/7 월</td><td style="color:var(--red)">-0.20%</td><td style="color:var(--red)">-1.00%</td><td style="color:var(--red)">-7.02%</td><td>삼성전자 잠정실적 + 이란 봉쇄</td></tr>
+      <tr><td>7/8 화</td><td style="color:var(--green)">+0.40%</td><td style="color:var(--green)">+0.80%</td><td style="color:var(--green)">+5.20%</td><td>삼성전자 89.4조 서프라이즈</td></tr>
+      <tr><td>7/9 수</td><td style="color:var(--green)">+0.81%</td><td style="color:var(--green)">+1.30%</td><td style="color:var(--muted)">혼조</td><td>반도체 반등, Micron +4.5%</td></tr>
+      <tr><td>7/10 목</td><td style="color:var(--green)">+0.12%</td><td style="color:var(--red)">-0.18%</td><td style="color:var(--green)">+2.52%</td><td>SK하이닉스 ADR 7배 청약, 사이드카</td></tr>
+      <tr><td>7/11 금</td><td colspan="4" style="color:var(--muted);text-align:center">휴장 (주말)</td></tr>
+    </tbody>
+  </table>
+  <div class="tip"><strong>✅ 긍정:</strong> 삼성전자 89.4조 역대 최대 실적. SK하이닉스 ADR 7배 초과청약. 코스피 사이드카 발동(+5%). Micron 실적 어닝 블로우아웃.</div>
+  <div class="alert"><strong>⚠️ 리스크:</strong> 이란 호르무즈 봉쇄 선언. 반도체 고점론 재점화. 외국인 연속 순매도. 코스피 7,000선 붕괴(-7%).</div>
+</div>
+
+<!-- ===== 섹터 전략 패널 ===== -->
+<div class="panel" id="panel-sector">
+  <div class="st">🎯 섹터별 투자 전략 (7/18 기준)</div>
+  <div class="g2">
+    <div class="inv">
+      <div class="inv-hd"><div class="inv-name">🏦 금융·은행</div><div class="ibadge ib-s">강력 비중확대</div></div>
+      <div class="inv-r">빅뱅크 90% 어닝 서프라이즈. 순환매 최대 수혜. 한국 거래대금 100조 증권주 강세.</div>
+      <div class="inv-e">Goldman · JPM · KB금융 · 한국금융지주</div>
+    </div>
+    <div class="inv">
+      <div class="inv-hd"><div class="inv-name">🏥 헬스케어</div><div class="ibadge ib-s">비중확대 ↑신규</div></div>
+      <div class="inv-r">이번 주 순환매 최대 수혜. UNH·ABT 어닝 서프라이즈. 방어적 성장 섹터로 자금 유입.</div>
+      <div class="inv-e">UNH · ABT · JNJ · 셀트리온</div>
+    </div>
+    <div class="inv">
+      <div class="inv-hd"><div class="inv-name">⚡ 에너지·방산</div><div class="ibadge ib-m">비중확대</div></div>
+      <div class="inv-r">유가 $71 소폭 하락. 방산 구조적 수혜 유지. 두산에너빌리티 이번 주 +6.7%.</div>
+      <div class="inv-e">XOM · 한화에어로스페이스 · 두산에너빌리티</div>
+    </div>
+    <div class="inv">
+      <div class="inv-hd"><div class="inv-name">☁️ 빅테크·클라우드</div><div class="ibadge ib-m">비중확대</div></div>
+      <div class="inv-r">다음 주 슈퍼위크(알파벳·메타·애플·아마존). 금리 하락 기대 밸류에이션 지지.</div>
+      <div class="inv-e">AAPL · MSFT · GOOGL · META · NAVER</div>
+    </div>
+    <div class="inv">
+      <div class="inv-hd"><div class="inv-name">🤖 AI·반도체</div><div class="ibadge ib-n">중립 (단기 관망)</div></div>
+      <div class="inv-r">CXMT IPO 충격. TSMC 호실적에도 주가 하락. SK하이닉스 실적(7월 말) 확인 후 재진입.</div>
+      <div class="inv-e">SK하이닉스 (실적 후) · NVDA · AMD</div>
+    </div>
+    <div class="inv">
+      <div class="inv-hd"><div class="inv-name">🇰🇷 한국 반도체</div><div class="ibadge ib-w">관망</div></div>
+      <div class="inv-r">CXMT + 외국인 매도 + 고점론. 외국인이 삼성 팔고 하이닉스 매수 — 종목 차별화.</div>
+      <div class="inv-e">SK하이닉스 (실적 후 재평가) · 삼성전자 (관망)</div>
+    </div>
+    <div class="inv">
+      <div class="inv-hd"><div class="inv-name">🏠 REIT·부동산</div><div class="ibadge ib-w">비중축소</div></div>
+      <div class="inv-r">10년물 4.42% 여전히 REIT 매력 낮음. FOMC 인하 확인 후 재진입.</div>
+      <div class="inv-e">단기채 ETF 대기 (SHY · BIL)</div>
+    </div>
+    <div class="inv">
+      <div class="inv-hd"><div class="inv-name">💰 현금·단기채</div><div class="ibadge ib-m">15~20% 유지</div></div>
+      <div class="inv-r">슈퍼위크 + FOMC 앞두고 현금 완충. 인하 확인 시 주식 비중 확대 전환.</div>
+      <div class="inv-e">MMDA · CMA · 단기국채 · RP</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 이벤트 캘린더 패널 ===== -->
+<div class="panel" id="panel-calendar">
+  <div class="st">📅 다음 주 슈퍼위크 + 주요 이벤트</div>
+  <div class="ev-card">
+    <div class="ev-row"><div class="ev-date">7/22 화</div><div class="ev-dot" style="background:var(--blue)"></div><div class="ev-name">알파벳(구글) 2Q + 테슬라 2Q 실적</div><div class="ev-imp" style="color:var(--blue)">★★★</div></div>
+    <div class="ev-row"><div class="ev-date">7/24 목</div><div class="ev-dot" style="background:var(--purple)"></div><div class="ev-name">메타 2Q + IBM 실적</div><div class="ev-imp" style="color:var(--purple)">★★★</div></div>
+    <div class="ev-row"><div class="ev-date">7/25 금</div><div class="ev-dot" style="background:var(--cyan)"></div><div class="ev-name">애플 2Q + 아마존 2Q + 6월 PCE</div><div class="ev-imp" style="color:var(--cyan)">★★★</div></div>
+    <div class="ev-row"><div class="ev-date">7/28~29</div><div class="ev-dot" style="background:var(--yellow)"></div><div class="ev-name" style="font-weight:600">🏦 FOMC 금리 결정 (동결 68.5% vs 인상 31.5%)</div><div class="ev-imp" style="color:var(--yellow)">최대변수</div></div>
+    <div class="ev-row"><div class="ev-date">7/31 목</div><div class="ev-dot" style="background:var(--red)"></div><div class="ev-name">AppLovin 실적 (Unity 선행지표)</div><div class="ev-imp" style="color:var(--red)">★★★</div></div>
+    <div class="ev-row"><div class="ev-date">7월 말</div><div class="ev-dot" style="background:var(--green)"></div><div class="ev-name">SK하이닉스 2Q 실적 (OPM 76% 기대)</div><div class="ev-imp" style="color:var(--green)">국장핵심</div></div>
+    <div class="ev-row"><div class="ev-date">8/5 수</div><div class="ev-dot" style="background:var(--orange)"></div><div class="ev-name">Unity Software (U) 2Q 실적</div><div class="ev-imp" style="color:var(--orange)">모니터링</div></div>
+    <div class="ev-row"><div class="ev-date">8/13</div><div class="ev-dot" style="background:var(--muted)"></div><div class="ev-name">7월 PPI 발표</div><div class="ev-imp" style="color:var(--muted)">★★</div></div>
+    <div class="ev-row"><div class="ev-date">8/14</div><div class="ev-dot" style="background:var(--muted)"></div><div class="ev-name">코스닥 전 종목 반기보고서 마감</div><div class="ev-imp" style="color:var(--muted)">★★</div></div>
+  </div>
+</div>
+
+<div style="text-align:center;margin-top:14px;font-size:0.63rem;color:var(--muted);">
+  ⚠ 공개 데이터 기반 참고용 · 투자 조언 아님 · 매주 월요일 업데이트
+</div>
+
+<script>
+  // 날짜
+  const d=new Date();
+  document.getElementById('nowDate').textContent=
+    `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${['일','월','화','수','목','금','토'][d.getDay()]})`;
+
+  // 탭 전환
+  function showPanel(id){
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById('panel-'+id).classList.add('active');
+    event.target.classList.add('active');
+    if(id==='history') setTimeout(animateBars,100);
   }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: 'Inter', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    padding: 20px;
+  // 히스토리 바 애니메이션
+  function animateBars(){
+    const bars={
+      cpi1:100, cpi2:100, cpi3:90, cpi4:83,
+      y1:100, y2:98, y3:96, y4:95,
+      v1:88, v2:100, v3:82, v4:74,
+      k1:100, k2:28, k3:70, k4:75
+    };
+    Object.entries(bars).forEach(([id,pct])=>{
+      const el=document.getElementById(id);
+      if(el){el.style.width='0%';setTimeout(()=>el.style.width=pct+'%',50);}
+    });
   }
-
-  .header {
-    display: flex;
+</script>
+</body>
+</html>
     justify-content: space-between;
     align-items: flex-end;
     margin-bottom: 24px;
