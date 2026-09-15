@@ -4,10 +4,12 @@
 경매마당(madangs.com)에서 서울 아파트 경매 물건을 긁어와 data.json으로 저장.
 
 동작 방식:
-1) 페이지 HTML 안의 Next.js __NEXT_DATA__ JSON을 우선 시도 (있으면 가장 안정적)
-2) 실패하면 화면에 보이는 텍스트를 정규식으로 파싱 (폴백, 사이트 구조 바뀌면 깨질 수 있음)
-3) 각 물건 주소를 카카오 로컬 API(REST 키)로 지오코딩해서 위경도 부여
-4) 결과를 data.json에 저장 (기존 파일 있으면 좌표 캐시로 재사용해서 API 호출 최소화)
+1) Playwright(headless Chromium)로 페이지를 실제로 렌더링해서 완성된 HTML을 얻음
+   (경매마당은 JS로 데이터를 채우는 SPA라 requests만으로는 빈 껍데기만 받아짐)
+2) 렌더링된 HTML에서 Next.js __NEXT_DATA__ JSON을 우선 시도
+3) 실패하면 화면에 보이는 텍스트를 정규식으로 파싱 (폴백)
+4) 각 물건 주소를 카카오 로컬 API(REST 키)로 지오코딩해서 위경도 부여
+5) 결과를 data.json에 저장 (기존 파일 있으면 좌표 캐시로 재사용해서 API 호출 최소화)
 
 환경변수:
   KAKAO_REST_KEY  - 카카오 REST API 키 (지오코딩용, 필수)
@@ -19,6 +21,7 @@ import sys
 import time
 import requests
 from datetime import datetime, timezone, timedelta
+from playwright.sync_api import sync_playwright
 
 SEARCH_URL = "https://madangs.com/search"
 KAKAO_GEOCODE_URL = "https://dapi.kakao.com/v2/local/search/address.json"
@@ -32,14 +35,23 @@ SEOUL_GU_LIST = [
 KAKAO_REST_KEY = os.environ.get("KAKAO_REST_KEY", "")
 
 
-def fetch_page_html():
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                      "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
-    }
-    resp = requests.get(SEARCH_URL, headers=headers, timeout=20)
-    resp.raise_for_status()
-    return resp.text
+def fetch_rendered_html():
+    """headless 브라우저로 페이지를 열어 JS 실행이 끝난 뒤의 HTML을 가져온다."""
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                       "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+        )
+        page.goto(SEARCH_URL, wait_until="networkidle", timeout=30000)
+        # 목록이 그려질 시간을 조금 더 줌 (렌더링/추가 API 호출 대비)
+        page.wait_for_timeout(2000)
+        html = page.content()
+        # 디버깅용: 실제로 뭘 받았는지 길이와 스니펫을 로그에 남김
+        print(f"[debug] 렌더링된 HTML 길이: {len(html)}자")
+        print(f"[debug] HTML 앞부분 미리보기:\n{html[:500]}")
+        browser.close()
+        return html
 
 
 def try_parse_next_data(html):
@@ -189,8 +201,8 @@ def geocode(address, cache_key, cache):
 
 
 def main():
-    print("경매마당 페이지 가져오는 중...")
-    html = fetch_page_html()
+    print("경매마당 페이지 가져오는 중 (headless 브라우저)...")
+    html = fetch_rendered_html()
 
     items = try_parse_next_data(html)
     if items:
