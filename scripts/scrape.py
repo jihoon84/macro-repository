@@ -90,18 +90,45 @@ def try_parse_next_data(html):
     return None
 
 
+def parse_korean_won(s):
+    """'17억 8,000만원' / '73억원' / '5,000만원' 같은 한글 금액 표기를 만원 단위 정수로 변환."""
+    s = s.replace(",", "")
+    eok_m = re.search(r'(\d+)억', s)
+    man_m = re.search(r'(\d+)만원', s)
+    eok = int(eok_m.group(1)) if eok_m else 0
+    man = int(man_m.group(1)) if man_m else 0
+    return eok * 10000 + man
+
+
+def extract_amount_after_label(window, label):
+    """window 안에서 '감정가 17억 8,000만원' 같은 패턴을 찾아 만원 단위로 반환."""
+    m = re.search(
+        re.escape(label) + r'\s*([0-9,]+억\s*[0-9,]*만?원?|[0-9,]+만원)',
+        window,
+    )
+    if not m:
+        return None
+    return parse_korean_won(m.group(1))
+
+
 def parse_fallback_text(html):
     """
-    __NEXT_DATA__가 없거나 구조를 못 찾은 경우의 폴백.
-    화면 텍스트 패턴(예: "아파트 2025타경123456 ... 강남구 ... 감정가 x억 최저가 y억")을
+    __NEXT_DATA__가 없는 경우(App Router)의 폴백.
+    화면 텍스트 패턴(예: "아파트 2025타경123456 ... 강남구 ... 감정가 17억 8,000만원 최저가 ...")을
     정규식으로 추출. 사이트 마크업이 바뀌면 이 부분을 다시 손봐야 할 수 있음.
     """
     text = re.sub(r"<[^>]+>", "\n", html)
     text = re.sub(r"\n{2,}", "\n", text)
 
+    case_matches = list(re.finditer(r"(20\d{2}타경\d{3,7})", text))
+    print(f"[debug] '타경' 사건번호 패턴 매치 수: {len(case_matches)}")
+    print(f"[debug] '감정가' 등장 횟수: {text.count('감정가')}, '최저가' 등장 횟수: {text.count('최저가')}")
+    if case_matches:
+        sample_start = case_matches[0].start()
+        print(f"[debug] 첫 매치 주변 텍스트:\n{text[max(0,sample_start-100):sample_start+300]}")
+
     items = []
-    # 사건번호 패턴을 앵커로 삼아 그 주변 텍스트 블록을 잘라서 파싱
-    for m in re.finditer(r"(20\d{2}타경\d{3,7})", text):
+    for m in case_matches:
         case_no = m.group(1)
         window = text[max(0, m.start() - 300): m.end() + 300]
 
@@ -113,20 +140,20 @@ def parse_fallback_text(html):
         if not type_match:
             continue  # 아파트만
 
-        appraisal_match = re.search(r"감정가[^\d]{0,5}([\d,]+)\s*원?", window)
-        minbid_match = re.search(r"최저가[^\d]{0,5}([\d,]+)\s*원?", window)
+        appraisal = extract_amount_after_label(window, "감정가")
+        min_bid = extract_amount_after_label(window, "최저가")
         fail_match = re.search(r"유찰\s*(\d+)\s*회", window)
-        addr_match = re.search(rf"{gu_match}\s*([가-힣0-9\-]+동)", window)
+        addr_match = re.search(rf"{gu_match}\s*([가-힣0-9]+동)", window)
 
-        if not (appraisal_match and minbid_match):
+        if not (appraisal and min_bid):
             continue
 
         items.append({
             "caseNo": case_no,
             "gu": gu_match,
             "dong": addr_match.group(1) if addr_match else "",
-            "appraisal": int(appraisal_match.group(1).replace(",", "")) // 10000,  # 원 -> 만원
-            "minBid": int(minbid_match.group(1).replace(",", "")) // 10000,
+            "appraisal": appraisal,
+            "minBid": min_bid,
             "failCount": int(fail_match.group(1)) if fail_match else 0,
         })
     return items
