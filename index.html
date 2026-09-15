@@ -2,901 +2,339 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>매크로 투자 레짐 대시보드 (히스토리)</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-  :root {
-    --bg:#0a0e17;--surface:#111827;--surface2:#1a2235;--border:#1e2d45;
-    --text:#e2e8f0;--muted:#64748b;--green:#10b981;--red:#ef4444;
-    --yellow:#f59e0b;--blue:#3b82f6;--cyan:#06b6d4;--orange:#f97316;--purple:#8b5cf6;
-  }
-  *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);padding:16px;min-height:100vh;}
-
-  /* 헤더 */
-  .header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border);}
-  .header h1{font-size:1.3rem;font-weight:700;}
-  .header h1 span{color:var(--cyan);}
-  .meta{font-size:0.72rem;color:var(--muted);text-align:right;}
-
-  /* 탭 */
-  .tabs{display:flex;gap:6px;margin-bottom:20px;overflow-x:auto;padding-bottom:4px;}
-  .tab{padding:7px 16px;border-radius:8px;font-size:0.75rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);white-space:nowrap;transition:all .2s;}
-  .tab.active{background:var(--cyan);color:#000;border-color:var(--cyan);}
-  .tab:hover:not(.active){background:var(--surface2);color:var(--text);}
-
-  /* 패널 */
-  .panel{display:none;}
-  .panel.active{display:block;}
-
-  /* 레짐 배너 */
-  .regime{background:linear-gradient(135deg,#1a2235,#0f1a2e);border:1px solid var(--border);border-left:4px solid;border-radius:12px;padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;gap:16px;}
-  .regime-icon{font-size:2rem;flex-shrink:0;}
-  .regime-label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;}
-  .regime-name{font-size:1.1rem;font-weight:700;margin:3px 0;}
-  .regime-desc{font-size:0.73rem;color:var(--muted);line-height:1.5;}
-
-  /* 지표 그리드 */
-  .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 14px;}
-  .card-label{font-size:0.63rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;}
-  .card-value{font-size:1.25rem;font-weight:700;line-height:1;}
-  .card-sub{font-size:0.67rem;color:var(--muted);margin-top:4px;}
-  .card-trend{font-size:0.67rem;font-weight:600;margin-top:5px;}
-  .sig{display:flex;gap:3px;margin-top:7px;}
-  .dot{width:7px;height:7px;border-radius:50%;background:var(--border);}
-  .dg{background:var(--green);box-shadow:0 0 5px var(--green);}
-  .dy{background:var(--yellow);box-shadow:0 0 5px var(--yellow);}
-  .dr{background:var(--red);box-shadow:0 0 5px var(--red);}
-
-  /* 변화 태그 */
-  .chg{font-size:0.58rem;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:4px;vertical-align:middle;}
-  .up{background:rgba(16,185,129,.2);color:var(--green);}
-  .dn{background:rgba(239,68,68,.2);color:var(--red);}
-  .nc{background:rgba(100,116,139,.2);color:var(--muted);}
-
-  /* 섹션 타이틀 */
-  .st{font-size:0.67rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:9px;margin-top:4px;}
-
-  /* 섹터 그리드 */
-  .g2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;}
-  .inv{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
-  .inv-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
-  .inv-name{font-size:0.82rem;font-weight:600;}
-  .ibadge{font-size:0.58rem;font-weight:700;padding:2px 7px;border-radius:20px;text-transform:uppercase;}
-  .ib-s{background:rgba(16,185,129,.15);color:var(--green);}
-  .ib-m{background:rgba(245,158,11,.15);color:var(--yellow);}
-  .ib-w{background:rgba(239,68,68,.15);color:var(--red);}
-  .ib-n{background:rgba(100,116,139,.2);color:var(--muted);}
-  .inv-r{font-size:0.69rem;color:var(--muted);line-height:1.5;}
-  .inv-e{font-size:0.65rem;color:var(--cyan);margin-top:3px;}
-
-  /* 이벤트 */
-  .ev-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;}
-  .ev-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.73rem;}
-  .ev-row:last-child{border-bottom:none;}
-  .ev-date{color:var(--muted);font-size:0.65rem;width:55px;flex-shrink:0;}
-  .ev-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-  .ev-name{flex:1;}
-  .ev-imp{font-size:0.63rem;font-weight:700;}
-
-  /* 알림 박스 */
-  .alert{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:9px;padding:10px 13px;margin-bottom:12px;font-size:0.72rem;color:#fca5a5;line-height:1.6;}
-  .alert strong{color:var(--red);}
-  .tip{background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);border-radius:9px;padding:10px 13px;margin-bottom:12px;font-size:0.72rem;color:#6ee7b7;line-height:1.6;}
-  .tip strong{color:var(--green);}
-
-  /* 히스토리 차트 */
-  .history-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px;}
-  .history-title{font-size:0.8rem;font-weight:600;margin-bottom:14px;}
-  .history-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:0.72rem;}
-  .history-date{width:55px;color:var(--muted);flex-shrink:0;}
-  .history-label{width:80px;flex-shrink:0;}
-  .history-bar-wrap{flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden;position:relative;}
-  .history-bar{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:6px;font-size:0.65rem;font-weight:600;color:#000;transition:width 1s ease;}
-  .history-val{width:55px;text-align:right;font-weight:600;flex-shrink:0;}
-
-  /* 주간 시황 테이블 */
-  .mkt-table{width:100%;border-collapse:collapse;font-size:0.73rem;margin-bottom:14px;}
-  .mkt-table th{background:var(--surface2);padding:8px 10px;text-align:left;font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);}
-  .mkt-table td{padding:8px 10px;border-bottom:1px solid var(--border);}
-  .mkt-table tr:last-child td{border-bottom:none;}
-  .mkt-table .card{background:transparent;border:none;padding:0;}
-
-  @media(max-width:580px){
-    .g3{grid-template-columns:1fr 1fr;}
-    .g2{grid-template-columns:1fr;}
-  }
-</style>
-</head>
-<body>
-
-<div class="header">
-  <div>
-    <h1>매크로 투자 레짐 <span>대시보드</span></h1>
-    <div style="font-size:0.7rem;color:var(--muted);margin-top:2px">누적 히스토리 · 매주 데이터 추가</div>
-  </div>
-  <div class="meta">
-    <div id="nowDate"></div>
-    <div>최신: 7/14~18 반영</div>
-  </div>
-</div>
-
-<!-- 탭 -->
-<div class="tabs">
-  <div class="tab active" onclick="showPanel('latest')">📊 최신 (7/18)</div>
-  <div class="tab" onclick="showPanel('history')">📈 히스토리</div>
-  <div class="tab" onclick="showPanel('w0718')">주간 7/14~18</div>
-  <div class="tab" onclick="showPanel('w0710')">주간 7/7~11</div>
-  <div class="tab" onclick="showPanel('sector')">🎯 섹터 전략</div>
-  <div class="tab" onclick="showPanel('calendar')">📅 이벤트</div>
-</div>
-
-<!-- ===== 최신 패널 ===== -->
-<div class="panel active" id="panel-latest">
-  <div class="regime" style="border-left-color:var(--yellow)">
-    <div class="regime-icon">⚡</div>
-    <div>
-      <div class="regime-label">현재 매크로 레짐 · 2026년 7월 3주차</div>
-      <div class="regime-name" style="color:var(--yellow)">디스인플레이션 가속 + 기술주→가치주 순환매</div>
-      <div class="regime-desc">CPI 3.5%(예상 하회) + PPI -0.3% 연속 서프라이즈. 빅테크·반도체에서 헬스케어·금융·에너지로 순환매 진행. CXMT IPO 메모리 과점 우려. 7/28~29 FOMC가 하반기 방향 결정.</div>
-    </div>
-  </div>
-
-  <div class="st">📊 핵심 매크로 지표</div>
-  <div class="g3">
-    <div class="card">
-      <div class="card-label">CPI (6월) <span class="chg up">↓개선</span></div>
-      <div class="card-value" style="color:var(--green)">3.5%</div>
-      <div class="card-sub">전월 4.2% → 빠른 냉각</div>
-      <div class="card-trend" style="color:var(--green)">예상(3.8%) 대폭 하회</div>
-      <div class="sig"><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot"></div></div>
-    </div>
-    <div class="card">
-      <div class="card-label">PPI (6월) <span class="chg up">↓개선</span></div>
-      <div class="card-value" style="color:var(--green)">-0.3%</div>
-      <div class="card-sub">2개월 연속 서프라이즈</div>
-      <div class="card-trend" style="color:var(--green)">인플레 냉각 가속 확인</div>
-      <div class="sig"><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot"></div></div>
-    </div>
-    <div class="card">
-      <div class="card-label">Fed 금리 <span class="chg nc">→유지</span></div>
-      <div class="card-value" style="color:var(--yellow)">3.50~3.75%</div>
-      <div class="card-sub">7/28 동결 68.5% 반영</div>
-      <div class="card-trend" style="color:var(--yellow)">워시 의장 물가우선 강조</div>
-      <div class="sig"><div class="dot dy"></div><div class="dot dy"></div><div class="dot dy"></div><div class="dot"></div><div class="dot"></div></div>
-    </div>
-    <div class="card">
-      <div class="card-label">10년물 금리 <span class="chg up">↓하락</span></div>
-      <div class="card-value" style="color:var(--green)">4.42%</div>
-      <div class="card-sub">CPI 후 4.57%→4.42%</div>
-      <div class="card-trend" style="color:var(--green)">금리 하락 기대 재부각</div>
-      <div class="sig"><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot"></div><div class="dot"></div></div>
-    </div>
-    <div class="card">
-      <div class="card-label">VIX <span class="chg up">↓개선</span></div>
-      <div class="card-value" style="color:var(--green)">16.5</div>
-      <div class="card-sub">전주 22.3→16.5 급락</div>
-      <div class="card-trend" style="color:var(--green)">공포 대폭 완화</div>
-      <div class="sig"><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot"></div></div>
-    </div>
-    <div class="card">
-      <div class="card-label">WTI 유가 <span class="chg up">↓하락</span></div>
-      <div class="card-value" style="color:var(--yellow)">$71</div>
-      <div class="card-sub">이란 협상 진전 반영</div>
-      <div class="card-trend" style="color:var(--yellow)">지정학 리스크 소폭 완화</div>
-      <div class="sig"><div class="dot dy"></div><div class="dot dy"></div><div class="dot dy"></div><div class="dot"></div><div class="dot"></div></div>
-    </div>
-    <div class="card">
-      <div class="card-label">GDP (1Q26) <span class="chg nc">→유지</span></div>
-      <div class="card-value" style="color:var(--blue)">+2.1%</div>
-      <div class="card-sub">침체 아님, 둔화 중</div>
-      <div class="card-trend" style="color:var(--blue)">소비·투자 견조 유지</div>
-      <div class="sig"><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot"></div><div class="dot"></div></div>
-    </div>
-    <div class="card">
-      <div class="card-label">고용 (6월 NFP) <span class="chg dn">↓악화</span></div>
-      <div class="card-value" style="color:var(--red)">57K</div>
-      <div class="card-sub">예상 113K → 절반</div>
-      <div class="card-trend" style="color:var(--red)">노동시장 냉각 신호</div>
-      <div class="sig"><div class="dot dr"></div><div class="dot dr"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-    </div>
-    <div class="card">
-      <div class="card-label">ISM PMI <span class="chg nc">→유지</span></div>
-      <div class="card-value" style="color:var(--blue)">53.2</div>
-      <div class="card-sub">50 이상 = 경기 확장</div>
-      <div class="card-trend" style="color:var(--blue)">서비스 경제 견조</div>
-      <div class="sig"><div class="dot dg"></div><div class="dot dg"></div><div class="dot dg"></div><div class="dot"></div><div class="dot"></div></div>
-    </div>
-  </div>
-
-  <div class="tip"><strong>✅ 이번 주 긍정:</strong> CPI·PPI 연속 서프라이즈. 빅뱅크 90% 어닝 상회. TSMC 역대 최고 매출. VIX 22→16 급락. 워시 의장 7월 인상 사실상 배제.</div>
-  <div class="alert"><strong>⚠️ 이번 주 리스크:</strong> 중국 CXMT 14조 IPO → 메모리 과점 우려 재점화. 반도체 섹터 순환매 소외. TSMC 호실적에도 반도체 역설적 하락.</div>
-</div>
-
-<!-- ===== 히스토리 패널 ===== -->
-<div class="panel" id="panel-history">
-  <div class="st">📈 주요 지표 주간 변화 추이</div>
-
-  <div class="history-card">
-    <div class="history-title">📊 CPI 추이 (YoY %)</div>
-    <div class="history-row">
-      <div class="history-date">5월초</div>
-      <div class="history-label" style="color:var(--red)">4.2%</div>
-      <div class="history-bar-wrap"><div class="history-bar" id="cpi1" style="width:0%;background:var(--red)">4.2%</div></div>
-    </div>
-    <div class="history-row">
-      <div class="history-date">6월초</div>
-      <div class="history-label" style="color:var(--orange)">4.2%</div>
-      <div class="history-bar-wrap"><div class="history-bar" id="cpi2" style="width:0%;background:var(--orange)">4.2%</div></div>
-    </div>
-    <div class="history-row">
-      <div class="history-date">7/7</div>
-      <div class="history-label" style="color:var(--yellow)">3.8% (예상)</div>
-      <div class="history-bar-wrap"><div class="history-bar" id="cpi3" style="width:0%;background:var(--yellow)">3.8%</div></div>
-    </div>
-    <div class="history-row">
-      <div class="history-date">7/14 ✅</div>
-      <div class="history-label" style="color:var(--green)">3.5% 실제</div>
-      <div class="history-bar-wrap"><div class="history-bar" id="cpi4" style="width:0%;background:var(--green)">3.5%</div></div>
-    </div>
-  </div>
-
-  <div class="history-card">
-    <div class="history-title">📊 10년물 금리 추이 (%)</div>
-    <div class="history-row">
-      <div class="history-date">6월말</div>
-      <div class="history-label" style="color:var(--red)">4.65%</div>
-      <div class="history-bar-wrap"><div class="history-bar" id="y1" style="width:0%;background:var(--red)">4.65%</div></div>
-    </div>
-    <div class="history-row">
-      <div class="history-date">7/7</div>
-      <div class="history-label" style="color:var(--orange)">4.57%</div>
-      <div class="history-bar-wrap"><div class="history-bar" id="y2" style="width:0%;background:var(--orange)">4.57%</div></div>
-    </div>
-    <div class="history-row">
-      <div class="history-date">7/14 CPI후</div>
-      <div class="history-label" style="color:var(--yellow)">4.48%</div>
-      <div class="history-bar-wrap"><div class="history-bar" id="y3" style="width:0%;background:var(--yellow)">4.48%</div></div>
-    </div>
-    <div class="history-row">
-      <div class="history-date">7/18 ✅</div>
-      <div class="history-label" style="color:var(--green)">4.42%</div>
-      <div class="history-bar-wrap"><div class="history-bar" id="y4" style="width:0%;background:var(--green)">4.42%</div></div>
-    </div>
-  </div>
-
-  <div class="history-card">
-    <div class="history-title">📊 VIX (공포지수) 추이</div>
-    <div class="history-row">
-      <div class="history-date">7/7</div>
-      <div class="history-label" style="color:var(--yellow)">19.5</div>
-      <div class="history-bar-wrap"><div class="history-bar" id="v1" style="width:0%;background:var(--yellow)">19.5</div></div>
-    </div>
-    <div class="history-row">
-      <div class="history-date">7/13 급락</div>
-      <div class="history-label" style="color:var(--red)">22.3 ↑</div>
-      <div class="history-bar-wrap"><div class="history-bar" id="v2" style="width:0%;background:var(--red)">22.3</div></div>
-    </div>
-    <div class="history-row">
-      <div class="history-date">7/14 CPI</div>
-      <div class="history-label" style="color:var(--orange)">18.1 ↓</div>
-      <div class="history-bar-wrap"><div class="history-bar" id="v3" style="width:0%;background:var(--orange)">18.1</div></div>
-    </div>
-    <div class="history-row">
-      <div class="history-date">7/18 ✅</div>
-      <div class="history-label" style="color:var(--green)">16.5 ↓</div>
-      <div class="history-bar-wrap"><div class="history-bar" id="v4" style="width:0%;background:var(--green)">16.5</div></div>
-    </div>
-  </div>
-
-  <div class="history-card">
-    <div class="history-title">📊 코스피 주간 성과</div>
-    <div class="history-row">
-      <div class="history-date">7/7주</div>
-      <div class="history-label" style="color:var(--red)">-8.95%</div>
-      <div class="history-bar-wrap"><div class="history-bar" id="k1" style="width:0%;background:var(--red)">이란 쇼크</div></div>
-    </div>
-    <div class="history-row">
-      <div class="history-date">7/10</div>
-      <div class="history-label" style="color:var(--green)">+2.52%</div>
-      <div class="history-bar-wrap"><div class="history-bar" id="k2" style="width:0%;background:var(--green)">ADR 흥행</div></div>
-    </div>
-    <div class="history-row">
-      <div class="history-date">7/14</div>
-      <div class="history-label" style="color:var(--green)">+6.24%</div>
-      <div class="history-bar-wrap"><div class="history-bar" id="k3" style="width:0%;background:var(--green)">CPI 서프라이즈</div></div>
-    </div>
-    <div class="history-row">
-      <div class="history-date">7/16</div>
-      <div class="history-label" style="color:var(--red)">-6.74%</div>
-      <div class="history-bar-wrap"><div class="history-bar" id="k4" style="width:0%;background:var(--red)">CXMT 쇼크</div></div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 주간 7/14~18 패널 ===== -->
-<div class="panel" id="panel-w0718">
-  <div class="st">📋 7월 14~18일 주간 시황</div>
-  <table class="mkt-table">
-    <thead><tr><th>날짜</th><th>미국 S&P500</th><th>나스닥</th><th>코스피</th><th>핵심 이슈</th></tr></thead>
-    <tbody>
-      <tr><td>7/14 화</td><td style="color:var(--green)">+0.54%</td><td style="color:var(--green)">+0.90%</td><td style="color:var(--green)">+6.24%</td><td>CPI 3.5% 서프라이즈</td></tr>
-      <tr><td>7/15 수</td><td style="color:var(--green)">+0.38%</td><td style="color:var(--green)">+0.62%</td><td style="color:var(--green)">+2.52%</td><td>PPI -0.3%, SK하이닉스 ADR 상장</td></tr>
-      <tr><td>7/16 목</td><td style="color:var(--red)">-0.25%</td><td style="color:var(--red)">-0.86%</td><td style="color:var(--red)">-6.74%</td><td>CXMT IPO 14조 쇼크</td></tr>
-      <tr><td>7/17 금</td><td colspan="4" style="color:var(--muted);text-align:center">한국 제헌절 휴장 / 미국 소폭 혼조</td></tr>
-      <tr><td><strong>주간</strong></td><td style="color:var(--green)"><strong>+0.80%</strong></td><td style="color:var(--green)"><strong>+0.50%</strong></td><td style="color:var(--red)"><strong>-1.50%</strong></td><td>롤러코스터 주간</td></tr>
-    </tbody>
-  </table>
-  <div class="tip"><strong>✅ 긍정:</strong> CPI·PPI 연속 서프라이즈. 빅뱅크 90% 어닝 상회. SK하이닉스 ADR 나스닥 데뷔 +13%. TSMC 역대 최고 매출.</div>
-  <div class="alert"><strong>⚠️ 리스크:</strong> 중국 CXMT 14조 IPO → 메모리 과점 우려. 반도체 섹터 소외. 국장 극단적 변동성(-6.74%~+6.24%) 지속.</div>
-</div>
-
-<!-- ===== 주간 7/7~11 패널 ===== -->
-<div class="panel" id="panel-w0710">
-  <div class="st">📋 7월 7~11일 주간 시황</div>
-  <table class="mkt-table">
-    <thead><tr><th>날짜</th><th>미국 S&P500</th><th>나스닥</th><th>코스피</th><th>핵심 이슈</th></tr></thead>
-    <tbody>
-      <tr><td>7/7 월</td><td style="color:var(--red)">-0.20%</td><td style="color:var(--red)">-1.00%</td><td style="color:var(--red)">-7.02%</td><td>삼성전자 잠정실적 + 이란 봉쇄</td></tr>
-      <tr><td>7/8 화</td><td style="color:var(--green)">+0.40%</td><td style="color:var(--green)">+0.80%</td><td style="color:var(--green)">+5.20%</td><td>삼성전자 89.4조 서프라이즈</td></tr>
-      <tr><td>7/9 수</td><td style="color:var(--green)">+0.81%</td><td style="color:var(--green)">+1.30%</td><td style="color:var(--muted)">혼조</td><td>반도체 반등, Micron +4.5%</td></tr>
-      <tr><td>7/10 목</td><td style="color:var(--green)">+0.12%</td><td style="color:var(--red)">-0.18%</td><td style="color:var(--green)">+2.52%</td><td>SK하이닉스 ADR 7배 청약, 사이드카</td></tr>
-      <tr><td>7/11 금</td><td colspan="4" style="color:var(--muted);text-align:center">휴장 (주말)</td></tr>
-    </tbody>
-  </table>
-  <div class="tip"><strong>✅ 긍정:</strong> 삼성전자 89.4조 역대 최대 실적. SK하이닉스 ADR 7배 초과청약. 코스피 사이드카 발동(+5%). Micron 실적 어닝 블로우아웃.</div>
-  <div class="alert"><strong>⚠️ 리스크:</strong> 이란 호르무즈 봉쇄 선언. 반도체 고점론 재점화. 외국인 연속 순매도. 코스피 7,000선 붕괴(-7%).</div>
-</div>
-
-<!-- ===== 섹터 전략 패널 ===== -->
-<div class="panel" id="panel-sector">
-  <div class="st">🎯 섹터별 투자 전략 (7/18 기준)</div>
-  <div class="g2">
-    <div class="inv">
-      <div class="inv-hd"><div class="inv-name">🏦 금융·은행</div><div class="ibadge ib-s">강력 비중확대</div></div>
-      <div class="inv-r">빅뱅크 90% 어닝 서프라이즈. 순환매 최대 수혜. 한국 거래대금 100조 증권주 강세.</div>
-      <div class="inv-e">Goldman · JPM · KB금융 · 한국금융지주</div>
-    </div>
-    <div class="inv">
-      <div class="inv-hd"><div class="inv-name">🏥 헬스케어</div><div class="ibadge ib-s">비중확대 ↑신규</div></div>
-      <div class="inv-r">이번 주 순환매 최대 수혜. UNH·ABT 어닝 서프라이즈. 방어적 성장 섹터로 자금 유입.</div>
-      <div class="inv-e">UNH · ABT · JNJ · 셀트리온</div>
-    </div>
-    <div class="inv">
-      <div class="inv-hd"><div class="inv-name">⚡ 에너지·방산</div><div class="ibadge ib-m">비중확대</div></div>
-      <div class="inv-r">유가 $71 소폭 하락. 방산 구조적 수혜 유지. 두산에너빌리티 이번 주 +6.7%.</div>
-      <div class="inv-e">XOM · 한화에어로스페이스 · 두산에너빌리티</div>
-    </div>
-    <div class="inv">
-      <div class="inv-hd"><div class="inv-name">☁️ 빅테크·클라우드</div><div class="ibadge ib-m">비중확대</div></div>
-      <div class="inv-r">다음 주 슈퍼위크(알파벳·메타·애플·아마존). 금리 하락 기대 밸류에이션 지지.</div>
-      <div class="inv-e">AAPL · MSFT · GOOGL · META · NAVER</div>
-    </div>
-    <div class="inv">
-      <div class="inv-hd"><div class="inv-name">🤖 AI·반도체</div><div class="ibadge ib-n">중립 (단기 관망)</div></div>
-      <div class="inv-r">CXMT IPO 충격. TSMC 호실적에도 주가 하락. SK하이닉스 실적(7월 말) 확인 후 재진입.</div>
-      <div class="inv-e">SK하이닉스 (실적 후) · NVDA · AMD</div>
-    </div>
-    <div class="inv">
-      <div class="inv-hd"><div class="inv-name">🇰🇷 한국 반도체</div><div class="ibadge ib-w">관망</div></div>
-      <div class="inv-r">CXMT + 외국인 매도 + 고점론. 외국인이 삼성 팔고 하이닉스 매수 — 종목 차별화.</div>
-      <div class="inv-e">SK하이닉스 (실적 후 재평가) · 삼성전자 (관망)</div>
-    </div>
-    <div class="inv">
-      <div class="inv-hd"><div class="inv-name">🏠 REIT·부동산</div><div class="ibadge ib-w">비중축소</div></div>
-      <div class="inv-r">10년물 4.42% 여전히 REIT 매력 낮음. FOMC 인하 확인 후 재진입.</div>
-      <div class="inv-e">단기채 ETF 대기 (SHY · BIL)</div>
-    </div>
-    <div class="inv">
-      <div class="inv-hd"><div class="inv-name">💰 현금·단기채</div><div class="ibadge ib-m">15~20% 유지</div></div>
-      <div class="inv-r">슈퍼위크 + FOMC 앞두고 현금 완충. 인하 확인 시 주식 비중 확대 전환.</div>
-      <div class="inv-e">MMDA · CMA · 단기국채 · RP</div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 이벤트 캘린더 패널 ===== -->
-<div class="panel" id="panel-calendar">
-  <div class="st">📅 다음 주 슈퍼위크 + 주요 이벤트</div>
-  <div class="ev-card">
-    <div class="ev-row"><div class="ev-date">7/22 화</div><div class="ev-dot" style="background:var(--blue)"></div><div class="ev-name">알파벳(구글) 2Q + 테슬라 2Q 실적</div><div class="ev-imp" style="color:var(--blue)">★★★</div></div>
-    <div class="ev-row"><div class="ev-date">7/24 목</div><div class="ev-dot" style="background:var(--purple)"></div><div class="ev-name">메타 2Q + IBM 실적</div><div class="ev-imp" style="color:var(--purple)">★★★</div></div>
-    <div class="ev-row"><div class="ev-date">7/25 금</div><div class="ev-dot" style="background:var(--cyan)"></div><div class="ev-name">애플 2Q + 아마존 2Q + 6월 PCE</div><div class="ev-imp" style="color:var(--cyan)">★★★</div></div>
-    <div class="ev-row"><div class="ev-date">7/28~29</div><div class="ev-dot" style="background:var(--yellow)"></div><div class="ev-name" style="font-weight:600">🏦 FOMC 금리 결정 (동결 68.5% vs 인상 31.5%)</div><div class="ev-imp" style="color:var(--yellow)">최대변수</div></div>
-    <div class="ev-row"><div class="ev-date">7/31 목</div><div class="ev-dot" style="background:var(--red)"></div><div class="ev-name">AppLovin 실적 (Unity 선행지표)</div><div class="ev-imp" style="color:var(--red)">★★★</div></div>
-    <div class="ev-row"><div class="ev-date">7월 말</div><div class="ev-dot" style="background:var(--green)"></div><div class="ev-name">SK하이닉스 2Q 실적 (OPM 76% 기대)</div><div class="ev-imp" style="color:var(--green)">국장핵심</div></div>
-    <div class="ev-row"><div class="ev-date">8/5 수</div><div class="ev-dot" style="background:var(--orange)"></div><div class="ev-name">Unity Software (U) 2Q 실적</div><div class="ev-imp" style="color:var(--orange)">모니터링</div></div>
-    <div class="ev-row"><div class="ev-date">8/13</div><div class="ev-dot" style="background:var(--muted)"></div><div class="ev-name">7월 PPI 발표</div><div class="ev-imp" style="color:var(--muted)">★★</div></div>
-    <div class="ev-row"><div class="ev-date">8/14</div><div class="ev-dot" style="background:var(--muted)"></div><div class="ev-name">코스닥 전 종목 반기보고서 마감</div><div class="ev-imp" style="color:var(--muted)">★★</div></div>
-  </div>
-</div>
-
-<div style="text-align:center;margin-top:14px;font-size:0.63rem;color:var(--muted);">
-  ⚠ 공개 데이터 기반 참고용 · 투자 조언 아님 · 매주 월요일 업데이트
-</div>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>서울 경매지도</title>
 <script>
-  // 날짜
-  const d=new Date();
-  document.getElementById('nowDate').textContent=
-    `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${['일','월','화','수','목','금','토'][d.getDay()]})`;
-
-  // 탭 전환
-  function showPanel(id){
-    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    document.getElementById('panel-'+id).classList.add('active');
-    event.target.classList.add('active');
-    if(id==='history') setTimeout(animateBars,100);
-  }
-
-  // 히스토리 바 애니메이션
-  function animateBars(){
-    const bars={
-      cpi1:100, cpi2:100, cpi3:90, cpi4:83,
-      y1:100, y2:98, y3:96, y4:95,
-      v1:88, v2:100, v3:82, v4:74,
-      k1:100, k2:28, k3:70, k4:75
-    };
-    Object.entries(bars).forEach(([id,pct])=>{
-      const el=document.getElementById(id);
-      if(el){el.style.width='0%';setTimeout(()=>el.style.width=pct+'%',50);}
-    });
-  }
+  window.__kakaoLoadError = false;
 </script>
-</body>
-</html>
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--border);
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c17c55872e7a0aa94a885761d7e3124f&autoload=false"
+  onerror="window.__kakaoLoadError=true;"></script>
+<style>
+  :root{
+    --ink:#1c2431; --ink-2:#2c374a; --paper:#f6f3ec; --paper-2:#eee9dd;
+    --line:#d9d2c1; --seal:#9c3b34; --seal-soft:#f1ded9; --gold:#a9822f;
+    --gold-soft:#efe4c8; --ink-soft:#6b7280;
+    --land:#efece2; --land-2:#f6f4ec; --river:#bcd3dd; --road:#ddd6c4;
   }
-  .header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
-  .header h1 span { color: var(--cyan); }
-  .header .date { font-size: 0.75rem; color: var(--muted); }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--paper);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Malgun Gothic",sans-serif;
+    color:var(--ink);}
+  #app{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 
-  /* 레짐 배너 */
-  .regime-banner {
-    background: linear-gradient(135deg, #1a2235 0%, #0f1a2e 100%);
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--yellow);
-    border-radius: 12px;
-    padding: 20px 24px;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
-  .regime-icon { font-size: 2.4rem; }
-  .regime-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
-  .regime-name { font-size: 1.35rem; font-weight: 700; color: var(--yellow); margin: 4px 0; }
-  .regime-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+  header{padding:14px 16px 12px;background:var(--ink);color:var(--paper);flex-shrink:0;}
+  header .row1{display:flex;align-items:baseline;justify-content:space-between;}
+  header h1{font-size:19px;margin:0;font-weight:700;letter-spacing:-0.2px;display:flex;align-items:center;gap:7px;}
+  header .count{font-size:12px;color:#c9b98f;font-weight:600;}
+  header .sub{font-size:11.5px;color:#9aa3b2;margin-top:3px;}
 
-  /* 그리드 */
-  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
-  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+  .filters{display:flex;gap:6px;overflow-x:auto;padding:10px 16px 12px;background:var(--ink);flex-shrink:0;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .filters::-webkit-scrollbar{display:none;}
+  .chip{flex-shrink:0;padding:6px 12px;border-radius:16px;font-size:12.5px;font-weight:600;background:var(--ink-2);color:#cdd3dc;border:1px solid #3a4558;cursor:pointer;white-space:nowrap;}
+  .chip.active{background:var(--gold);color:var(--ink);border-color:var(--gold);}
 
-  /* 지표 카드 */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 16px;
-  }
-  .card-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
-  .card-value { font-size: 1.4rem; font-weight: 700; line-height: 1; }
-  .card-sub { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
-  .card-trend { font-size: 0.72rem; font-weight: 600; margin-top: 6px; }
+  .legend{display:flex;gap:10px;align-items:center;padding:7px 16px;background:var(--paper-2);font-size:10px;color:var(--ink-soft);flex-shrink:0;border-bottom:1px solid var(--line);}
+  .legend span{display:flex;align-items:center;gap:4px;}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
 
-  .green { color: var(--green); }
-  .red { color: var(--red); }
-  .yellow { color: var(--yellow); }
-  .blue { color: var(--blue); }
-  .cyan { color: var(--cyan); }
-  .orange { color: var(--orange); }
-  .purple { color: var(--purple); }
+  #mapWrap{flex:1 1 46%;min-height:250px;position:relative;background:var(--land);overflow:hidden;}
+  #map{width:100%;height:100%;}
+  #mapStatus{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    background:var(--land);color:var(--ink-soft);font-size:12px;text-align:center;padding:20px;z-index:5;}
 
-  /* 신호등 바 */
-  .signal-bar {
-    display: flex;
-    gap: 4px;
-    margin-top: 8px;
-  }
-  .signal-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--border);
-  }
-  .signal-dot.active-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
-  .signal-dot.active-yellow { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
-  .signal-dot.active-red { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .iw{background:#fff;border-radius:9px;padding:9px 11px;box-shadow:0 8px 20px rgba(0,0,0,.2);
+    min-width:150px;max-width:200px;border:1px solid var(--line);}
+  .iw .t-name{font-size:12.5px;font-weight:800;color:var(--ink);}
+  .iw .t-addr{font-size:10.5px;color:var(--ink-soft);margin-top:1px;}
+  .iw .t-price{font-size:11.5px;font-weight:800;color:var(--seal);margin-top:4px;}
 
-  /* 섹터 추천 */
-  .section-title {
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--muted);
-    margin-bottom: 10px;
-  }
+  .sheet{flex:1 1 54%;overflow-y:auto;background:var(--paper);border-top:2px solid var(--ink);-webkit-overflow-scrolling:touch;}
+  .sheet-inner{padding:12px 14px 28px;}
+  .sort-row{display:flex;justify-content:space-between;align-items:center;padding:2px 2px 10px;font-size:12px;color:var(--ink-soft);}
+  .sort-row select{font-size:12px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 6px;color:var(--ink);font-weight:600;}
 
-  .invest-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .invest-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .invest-name { font-size: 0.88rem; font-weight: 600; }
-  .invest-badge {
-    font-size: 0.62rem;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 20px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .badge-strong { background: rgba(16,185,129,0.15); color: var(--green); }
-  .badge-mid { background: rgba(245,158,11,0.15); color: var(--yellow); }
-  .badge-weak { background: rgba(239,68,68,0.15); color: var(--red); }
-  .badge-neutral { background: rgba(100,116,139,0.2); color: var(--muted); }
-
-  .invest-reason { font-size: 0.72rem; color: var(--muted); line-height: 1.5; }
-  .invest-examples { font-size: 0.7rem; color: var(--cyan); margin-top: 2px; }
-
-  /* 게이지 */
-  .gauge-wrap { margin-top: 8px; }
-  .gauge-track {
-    height: 6px;
-    background: var(--border);
-    border-radius: 3px;
-    overflow: hidden;
-    margin: 4px 0;
-  }
-  .gauge-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
-
-  /* 경고 박스 */
-  .alert-box {
-    background: rgba(239,68,68,0.08);
-    border: 1px solid rgba(239,68,68,0.25);
-    border-radius: 10px;
-    padding: 12px 16px;
-    margin-bottom: 16px;
-    font-size: 0.78rem;
-    color: #fca5a5;
-    line-height: 1.6;
-  }
-  .alert-box strong { color: var(--red); }
-
-  /* 다음 이벤트 */
-  .event-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 9px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.78rem;
-  }
-  .event-row:last-child { border-bottom: none; }
-  .event-date { color: var(--muted); font-size: 0.7rem; min-width: 80px; }
-  .event-name { flex: 1; margin: 0 10px; }
-  .event-impact { font-size: 0.68rem; font-weight: 600; }
-
-  /* 업데이트 버튼 */
-  .update-btn {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--cyan);
-    font-size: 0.75rem;
-    padding: 6px 14px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-family: 'Inter', sans-serif;
-    transition: all 0.2s;
-  }
-  .update-btn:hover { background: var(--border); }
-
-  @media(max-width: 600px) {
-    .grid-3 { grid-template-columns: 1fr 1fr; }
-    .grid-2 { grid-template-columns: 1fr; }
-  }
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 13px;margin-bottom:10px;cursor:pointer;}
+  .card.selected{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink);}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .card-name{font-size:15px;font-weight:700;color:var(--ink);line-height:1.3;}
+  .card-addr{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .badge{flex-shrink:0;font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;white-space:nowrap;}
+  .badge.hot{background:var(--seal-soft);color:var(--seal);}
+  .badge.warm{background:var(--gold-soft);color:var(--gold);}
+  .badge.new{background:#e4e9f0;color:var(--ink-2);}
+  .price-row{display:flex;align-items:baseline;gap:8px;margin-top:9px;flex-wrap:wrap;}
+  .price-now{font-size:18px;font-weight:800;color:var(--ink);}
+  .price-orig{font-size:12px;color:var(--ink-soft);text-decoration:line-through;}
+  .meta-row{display:flex;gap:12px;margin-top:8px;font-size:11.5px;color:var(--ink-soft);border-top:1px dashed var(--line);padding-top:8px;flex-wrap:wrap;}
+  .meta-row b{color:var(--ink-2);font-weight:700;}
+  .tags{margin-top:7px;display:flex;gap:5px;flex-wrap:wrap;}
+  .tag{font-size:10.5px;background:var(--paper-2);color:var(--ink-2);padding:2px 7px;border-radius:5px;font-weight:600;}
+  .empty{text-align:center;padding:40px 20px;color:var(--ink-soft);font-size:13px;}
 </style>
 </head>
 <body>
-
-<div class="header">
-  <div>
-    <h1>매크로 투자 레짐 <span>대시보드</span></h1>
-    <div class="date" id="nowDate">2026년 7월 17일 (금) · 데이터 기준: 최신 공개 수치</div>
-  </div>
-  <button class="update-btn" onclick="animateGauges()">↺ 새로고침</button>
-</div>
-
-<!-- 현재 레짐 -->
-<div class="regime-banner">
-  <div class="regime-icon">⚡</div>
-  <div>
-    <div class="regime-label">현재 매크로 레짐</div>
-    <div class="regime-name">디스인플레이션 전환기 + 지정학 리스크 상존</div>
-    <div class="regime-desc">인플레이션이 고점에서 꺾이고 있으나 연준은 아직 긴축 유지 중. 성장은 둔화되나 침체 아님(GDP +2.1%). 이란-호르무즈 지정학 리스크가 유가를 통해 물가에 상방 압력. AI 기업 이익 사이클은 여전히 강력.</div>
-  </div>
-</div>
-
-<!-- 핵심 매크로 지표 -->
-<div class="section-title">📊 핵심 매크로 지표 (7월 기준)</div>
-<div class="grid-3">
-  <div class="card">
-    <div class="card-label">CPI (6월)</div>
-    <div class="card-value green">3.5%</div>
-    <div class="card-sub">전월 4.2% → 빠른 냉각</div>
-    <div class="card-trend green">↓ 예상(3.8%) 하회 → 긍정</div>
-    <div class="signal-bar">
-      <div class="signal-dot active-green"></div>
-      <div class="signal-dot active-green"></div>
-      <div class="signal-dot active-green"></div>
-      <div class="signal-dot"></div>
-      <div class="signal-dot"></div>
+<div id="app">
+  <header>
+    <div class="row1">
+      <h1>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9b98f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6M8.5 15.5L4 20M6 12l6 6M16 6l-3 3M18 3l3 3-3 3-3-3z"/></svg>
+        서울 경매지도
+      </h1>
+      <span class="count" id="resultCount">14건</span>
     </div>
+    <div class="sub" id="updatedSub">경매마당 · 대법원 법원경매 기준 · 불러오는 중...</div>
+  </header>
+
+  <div class="filters" id="guFilters"></div>
+  <div class="legend">
+    <span><i class="dot" style="background:#9c3b34"></i>35%↑ 고할인</span>
+    <span><i class="dot" style="background:#a9822f"></i>20~34%</span>
+    <span><i class="dot" style="background:#2c374a"></i>20% 미만</span>
   </div>
-  <div class="card">
-    <div class="card-label">PPI (6월)</div>
-    <div class="card-value green">-0.3%</div>
-    <div class="card-sub">YoY +5.5% (에너지 제외 하락)</div>
-    <div class="card-trend green">↓ 예상 하회 → 긍정</div>
-    <div class="signal-bar">
-      <div class="signal-dot active-green"></div>
-      <div class="signal-dot active-green"></div>
-      <div class="signal-dot active-green"></div>
-      <div class="signal-dot active-green"></div>
-      <div class="signal-dot"></div>
-    </div>
+
+  <div id="mapWrap">
+    <div id="map"></div>
+    <div id="mapStatus">지도를 불러오는 중...</div>
   </div>
-  <div class="card">
-    <div class="card-label">Fed 기준금리</div>
-    <div class="card-value yellow">3.50~3.75%</div>
-    <div class="card-sub">6월 FOMC 동결 (만장일치)</div>
-    <div class="card-trend yellow">→ 7/28 FOMC 동결 68.5% 반영</div>
-    <div class="signal-bar">
-      <div class="signal-dot active-yellow"></div>
-      <div class="signal-dot active-yellow"></div>
-      <div class="signal-dot active-yellow"></div>
-      <div class="signal-dot"></div>
-      <div class="signal-dot"></div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-label">미 10년물 금리</div>
-    <div class="card-value yellow">4.56%</div>
-    <div class="card-sub">2년물 4.22% · 장단기 정상화</div>
-    <div class="card-trend yellow">→ 인하 기대 재부각 시 하락 예상</div>
-    <div class="gauge-wrap">
-      <div class="gauge-track">
-        <div class="gauge-fill" id="g1" style="width:0%; background: linear-gradient(90deg,#f59e0b,#ef4444)"></div>
+
+  <div class="sheet">
+    <div class="sheet-inner">
+      <div class="sort-row">
+        <span id="listLabel">전체 아파트 경매</span>
+        <select id="sortSel">
+          <option value="deadline">매각기일 빠른순</option>
+          <option value="discount">할인율 높은순</option>
+          <option value="priceAsc">최저가 낮은순</option>
+          <option value="priceDesc">최저가 높은순</option>
+        </select>
       </div>
+      <div id="list"></div>
     </div>
   </div>
-  <div class="card">
-    <div class="card-label">GDP 성장률 (1Q26)</div>
-    <div class="card-value blue">+2.1%</div>
-    <div class="card-sub">연환산 기준 (BEA 3차 추정)</div>
-    <div class="card-trend blue">→ 둔화 중이나 침체 아님</div>
-    <div class="gauge-wrap">
-      <div class="gauge-track">
-        <div class="gauge-fill" id="g2" style="width:0%; background: var(--blue)"></div>
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-label">VIX (공포지수)</div>
-    <div class="card-value green">16.5</div>
-    <div class="card-sub">CPI 발표 후 3.9% 하락</div>
-    <div class="card-trend green">↓ 공포 완화 → 위험자산 우호</div>
-    <div class="signal-bar">
-      <div class="signal-dot active-green"></div>
-      <div class="signal-dot active-green"></div>
-      <div class="signal-dot active-green"></div>
-      <div class="signal-dot active-green"></div>
-      <div class="signal-dot"></div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-label">ISM 서비스 PMI</div>
-    <div class="card-value blue">53.2</div>
-    <div class="card-sub">50 이상 = 경기 확장</div>
-    <div class="card-trend blue">→ 서비스 경제 견조 유지</div>
-    <div class="gauge-wrap">
-      <div class="gauge-track">
-        <div class="gauge-fill" id="g3" style="width:0%; background: var(--blue)"></div>
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-label">고용 (6월 NFP)</div>
-    <div class="card-value red">57K</div>
-    <div class="card-sub">예상 113K → 절반 수준</div>
-    <div class="card-trend red">↓ 노동시장 냉각 신호</div>
-    <div class="signal-bar">
-      <div class="signal-dot active-red"></div>
-      <div class="signal-dot active-red"></div>
-      <div class="signal-dot"></div>
-      <div class="signal-dot"></div>
-      <div class="signal-dot"></div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-label">WTI 유가</div>
-    <div class="card-value orange">$73</div>
-    <div class="card-sub">이란 봉쇄로 변동성 높음</div>
-    <div class="card-trend orange">⚠ 지정학 변수 · 상방 리스크</div>
-    <div class="signal-bar">
-      <div class="signal-dot active-yellow"></div>
-      <div class="signal-dot active-yellow"></div>
-      <div class="signal-dot active-red"></div>
-      <div class="signal-dot"></div>
-      <div class="signal-dot"></div>
-    </div>
-  </div>
-</div>
-
-<!-- 경고 -->
-<div class="alert-box">
-  ⚠ <strong>주요 리스크:</strong> 이란-호르무즈 해협 봉쇄가 유가를 재차 자극할 경우 헤드라인 CPI 반등 → 연준 인상 재개 시나리오가 재부각됩니다. 유가 $85 이상 + CPI 재상승 시 현금 비중 확대 전략으로 전환이 필요합니다.
-</div>
-
-<!-- 투자 전략 -->
-<div class="section-title">🎯 현재 레짐의 투자 전략 (섹터별)</div>
-<div class="grid-2">
-
-  <div class="invest-card">
-    <div class="invest-header">
-      <div class="invest-name">🤖 AI·반도체 (미국)</div>
-      <div class="invest-badge badge-strong">강력 비중확대</div>
-    </div>
-    <div class="invest-reason">이익 사이클 압도적 (S&P 500 2Q EPS +24% 전망). CPI 냉각으로 금리 부담 완화. 반도체 고점론은 단기 노이즈. 실적이 밸류에이션 정당화.</div>
-    <div class="invest-examples">NVDA · AMD · AVGO · Micron · TSMC</div>
-  </div>
-
-  <div class="invest-card">
-    <div class="invest-header">
-      <div class="invest-name">🏦 금융 (미국·한국)</div>
-      <div class="invest-badge badge-strong">강력 비중확대</div>
-    </div>
-    <div class="invest-reason">빅뱅크 어닝 서프라이즈 연속. 금리 고점 유지로 NIM(순이자마진) 견조. 한국 거래대금 100조 시대 증권주 실적 레버리지.</div>
-    <div class="invest-examples">Goldman Sachs · JPM · KB금융 · 한국금융지주</div>
-  </div>
-
-  <div class="invest-card">
-    <div class="invest-header">
-      <div class="invest-name">⚡ 에너지·방산</div>
-      <div class="invest-badge badge-mid">비중확대</div>
-    </div>
-    <div class="invest-reason">이란 지정학 리스크로 유가 지지. 나토 확대 + 글로벌 방위비 증가 구조적 상승. 인플레 헤지 기능.</div>
-    <div class="invest-examples">OXY · XOM · 한화에어로스페이스 · 두산에너빌리티</div>
-  </div>
-
-  <div class="invest-card">
-    <div class="invest-header">
-      <div class="invest-name">☁️ 빅테크·클라우드</div>
-      <div class="invest-badge badge-mid">비중확대</div>
-    </div>
-    <div class="invest-reason">금리 인하 기대 재부각 시 성장주 밸류에이션 확장. 애플 신고가, MS·알파벳 +3%. AI Capex 지속성 확인 중.</div>
-    <div class="invest-examples">AAPL · MSFT · GOOGL · META · NAVER</div>
-  </div>
-
-  <div class="invest-card">
-    <div class="invest-header">
-      <div class="invest-name">🏥 헬스케어·바이오</div>
-      <div class="invest-badge badge-neutral">중립</div>
-    </div>
-    <div class="invest-reason">경기 방어적 성격. 금리 인하 시 수혜. 단, 메디케어 정책 불확실성 + UNH 어닝 쇼크 주의. 선별 접근 필요.</div>
-    <div class="invest-examples">JNJ · 에이프릴바이오 · 셀트리온 (선별)</div>
-  </div>
-
-  <div class="invest-card">
-    <div class="invest-header">
-      <div class="invest-name">🏠 부동산·REIT</div>
-      <div class="invest-badge badge-weak">비중축소</div>
-    </div>
-    <div class="invest-reason">10년물 금리 4.56% 수준에서 REIT 배당 매력 감소. 상업용 오피스 공실 문제 지속. 금리 확실한 인하 확인 후 재진입.</div>
-    <div class="invest-examples">현금 대기 or 단기채 ETF (SHY, BIL)</div>
-  </div>
-
-  <div class="invest-card">
-    <div class="invest-header">
-      <div class="invest-name">🚗 임의소비재</div>
-      <div class="invest-badge badge-weak">비중축소</div>
-    </div>
-    <div class="invest-reason">고금리 장기화로 소비 여력 압박. 고용 냉각(NFP 57K) + 실질임금 정체. 경기 민감 소비 업종 리스크 상존.</div>
-    <div class="invest-examples">방어적 필수소비재로 대체 고려</div>
-  </div>
-
-  <div class="invest-card">
-    <div class="invest-header">
-      <div class="invest-name">💰 현금·단기채</div>
-      <div class="invest-badge badge-mid">유지</div>
-    </div>
-    <div class="invest-reason">기준금리 3.5~3.75% 구간에서 현금 기회비용 낮지 않음. 지정학 리스크 헤지 + 변동성 국면 완충 역할. 포트의 15~20% 권장.</div>
-    <div class="invest-examples">MMDA · CMA · 단기국채 ETF · RP</div>
-  </div>
-
-</div>
-
-<!-- 다음 이벤트 -->
-<div class="section-title">📅 향후 핵심 이벤트 (투자 판단 분기점)</div>
-<div class="card">
-  <div class="event-row">
-    <div class="event-date">7/18 (토)</div>
-    <div class="event-name">주말 이란-미국 협상 동향</div>
-    <div class="event-impact orange">⚠ 유가 변수</div>
-  </div>
-  <div class="event-row">
-    <div class="event-date">7/22 (화)</div>
-    <div class="event-name">Netflix 구독 성장 확인 + 빅테크 실적 시작</div>
-    <div class="event-impact blue">★★ 중요</div>
-  </div>
-  <div class="event-row">
-    <div class="event-date">7/24 (목)</div>
-    <div class="event-name">알파벳·테슬라 2Q 실적</div>
-    <div class="event-impact blue">★★★ 핵심</div>
-  </div>
-  <div class="event-row">
-    <div class="event-date">7/25 (금)</div>
-    <div class="event-name">애플·아마존 2Q 실적 + 6월 PCE</div>
-    <div class="event-impact blue">★★★ 핵심</div>
-  </div>
-  <div class="event-row">
-    <div class="event-date">7/28~29</div>
-    <div class="event-name">FOMC 금리 결정 (동결 68.5% vs 인상 31.5%)</div>
-    <div class="event-impact red">★★★ 최대 변수</div>
-  </div>
-  <div class="event-row">
-    <div class="event-date">7월 말</div>
-    <div class="event-name">SK하이닉스 2Q 실적 (OPM 76% 기대)</div>
-    <div class="event-impact cyan">★★★ 국장 핵심</div>
-  </div>
-  <div class="event-row">
-    <div class="event-date">8/5 (수)</div>
-    <div class="event-name">Unity Software (U) 2Q 실적</div>
-    <div class="event-impact purple">★★ 모니터링</div>
-  </div>
-  <div class="event-row">
-    <div class="event-date">8/14</div>
-    <div class="event-name">코스닥 전 종목 반기보고서 마감</div>
-    <div class="event-impact cyan">★★ 국장 모니터링</div>
-  </div>
-</div>
-
-<div style="text-align:center; margin-top:16px; font-size:0.68rem; color:var(--muted);">
-  ⚠ 본 대시보드는 공개 데이터 기반 참고용이며 투자 조언이 아닙니다 · 최종 판단은 본인 책임
 </div>
 
 <script>
-  // 날짜 업데이트
-  const d = new Date();
-  document.getElementById('nowDate').textContent =
-    `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 · 데이터 기준: 최신 공개 수치`;
+let DATA = [];
 
-  function animateGauges() {
-    const targets = [
-      { id: 'g1', pct: 73 },   // 10년물 금리
-      { id: 'g2', pct: 42 },   // GDP
-      { id: 'g3', pct: 66 },   // ISM PMI
-    ];
-    targets.forEach(t => {
-      const el = document.getElementById(t.id);
-      if (el) { el.style.width = '0%'; setTimeout(() => el.style.width = t.pct + '%', 50); }
+function pct(d){ return Math.round((1 - d.minBid/d.appraisal)*100); }
+function tier(d){ const p = pct(d); if(p>=35) return "hot"; if(p>=20) return "warm"; return "new"; }
+function tierColor(t){ return t==="hot" ? "#9c3b34" : t==="warm" ? "#a9822f" : "#2c374a"; }
+function won(v){
+  const eok = Math.floor(v/10000), man = v%10000;
+  if(eok>0 && man>0) return `${eok}억 ${man.toLocaleString()}만원`;
+  if(eok>0) return `${eok}억원`;
+  return `${man.toLocaleString()}만원`;
+}
+
+let map, markers = {}, overlays = {};
+
+function initMap(){
+  const container = document.getElementById('map');
+  const center = new kakao.maps.LatLng(37.535, 127.045);
+  map = new kakao.maps.Map(container, { center, level: 8 });
+  document.getElementById('mapStatus').style.display = 'none';
+
+  DATA.forEach(d=>{
+    const t = tier(d);
+    const pos = new kakao.maps.LatLng(d.lat, d.lng);
+    const content = document.createElement('div');
+    content.style.cssText = `width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+      background:${tierColor(t)};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);
+      display:flex;align-items:center;justify-content:center;cursor:pointer;`;
+    const label = document.createElement('span');
+    label.style.cssText = 'transform:rotate(45deg);font-size:9.5px;font-weight:800;color:#fff;';
+    label.textContent = pct(d)+'%';
+    content.appendChild(label);
+
+    const overlay = new kakao.maps.CustomOverlay({ position: pos, content, yAnchor: 1, xAnchor: 0.5 });
+    overlay.setMap(map);
+    overlays[d.id] = overlay;
+
+    const iw = new kakao.maps.CustomOverlay({
+      position: pos, yAnchor: 1.9,
+      content: `<div class="iw">
+        <div class="t-name">${d.name}</div>
+        <div class="t-addr">${d.gu} ${d.dong} · ${d.area}</div>
+        <div class="t-price">최저가 ${won(d.minBid)} · ${pct(d)}%↓</div>
+      </div>`
     });
+    markers[d.id] = iw;
+
+    content.addEventListener('click', ()=> selectCard(d.id, true));
+  });
+
+  kakao.maps.event.addListener(map, 'click', ()=>{
+    Object.values(markers).forEach(m=>m.setMap(null));
+  });
+}
+
+function showTip(d){
+  Object.values(markers).forEach(m=>m.setMap(null));
+  markers[d.id].setMap(map);
+  map.panTo(new kakao.maps.LatLng(d.lat, d.lng));
+}
+
+let kakaoReady = false, dataReady = false;
+
+function maybeInitMap(){
+  if (kakaoReady && dataReady && !map) {
+    try {
+      initMap();
+    } catch(err) {
+      document.getElementById('mapStatus').textContent =
+        '지도 초기화 중 오류: ' + (err && err.message ? err.message : err);
+    }
   }
-  window.onload = () => setTimeout(animateGauges, 300);
+}
+
+function tryInitKakaoMap(attemptsLeft){
+  if (window.__kakaoLoadError) {
+    document.getElementById('mapStatus').textContent =
+      '카카오 스크립트 로드 자체가 실패했어요. 네트워크 연결(와이파이/데이터)을 확인하거나, 브라우저를 새로고침(캐시 삭제 후)해보세요.';
+    return;
+  }
+  if (window.kakao && window.kakao.maps && window.kakao.maps.load) {
+    window.kakao.maps.load(function(){
+      kakaoReady = true;
+      maybeInitMap();
+    });
+    return;
+  }
+  if (attemptsLeft > 0) {
+    setTimeout(function(){ tryInitKakaoMap(attemptsLeft - 1); }, 300);
+  } else {
+    document.getElementById('mapStatus').textContent =
+      '카카오맵 스크립트가 아직 로드되지 않았어요. 도메인이 JavaScript 키에 등록되어 있는지, http(s) 주소로 접속했는지 확인해주세요.';
+  }
+}
+window.addEventListener('error', function(e){
+  const el = document.getElementById('mapStatus');
+  if (el && el.style.display !== 'none' && !el.dataset.shown) {
+    el.dataset.shown = '1';
+    el.style.display = 'flex';
+    el.textContent = '오류 발생: ' + (e.message || '알 수 없는 오류') + ' (' + (e.filename||'') + ')';
+  }
+});
+window.addEventListener('load', function(){ tryInitKakaoMap(10); });
+
+let activeGu = "전체", sortMode = "deadline", selectedId = null;
+
+function buildFilters(){
+  const guList = ["전체", ...Array.from(new Set(DATA.map(d=>d.gu))).sort()];
+  const guFiltersEl = document.getElementById('guFilters');
+  guFiltersEl.innerHTML = "";
+  guList.forEach(gu=>{
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (gu==="전체" ? ' active' : '');
+    chip.textContent = gu;
+    chip.onclick = ()=>{ activeGu = gu; render();
+      [...guFiltersEl.children].forEach(c=>c.classList.toggle('active', c===chip));
+    };
+    guFiltersEl.appendChild(chip);
+  });
+}
+document.getElementById('sortSel').addEventListener('change', e=>{ sortMode = e.target.value; render(); });
+function saleDateToNum(s){ return parseInt((s||"").replace('.',''),10) || 0; }
+
+function formatUpdatedAt(iso){
+  if(!iso) return "업데이트 시각 알 수 없음";
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())} 기준 자동 업데이트`;
+}
+
+async function loadData(){
+  try {
+    const res = await fetch('./data.json', {cache:'no-store'});
+    if(!res.ok) throw new Error('data.json 응답 오류: ' + res.status);
+    const json = await res.json();
+    DATA = json.items || [];
+    document.getElementById('updatedSub').textContent =
+      `경매마당 · 대법원 법원경매 기준 · ${formatUpdatedAt(json.updatedAt)}`;
+  } catch(err) {
+    document.getElementById('updatedSub').textContent =
+      '데이터를 불러오지 못했어요 (' + err.message + ')';
+    document.getElementById('list').innerHTML =
+      '<div class="empty">데이터 로드 실패. data.json 파일이 같은 폴더에 있는지 확인해주세요.</div>';
+  }
+  dataReady = true;
+  buildFilters();
+  render();
+  maybeInitMap();
+}
+
+function updatePinDimming(){
+  const visibleIds = new Set(DATA.filter(d=> activeGu==="전체" || d.gu===activeGu).map(d=>d.id));
+  DATA.forEach(d=>{
+    const ov = overlays[d.id];
+    if(!ov) return;
+    const content = ov.getContent();
+    if(typeof content !== 'string' && content.style){
+      content.style.opacity = visibleIds.has(d.id) ? '1' : '0.28';
+    }
+  });
+}
+
+function render(){
+  let rows = DATA.filter(d => activeGu==="전체" || d.gu===activeGu);
+  if(sortMode==="deadline") rows.sort((a,b)=> saleDateToNum(a.saleDate)-saleDateToNum(b.saleDate));
+  if(sortMode==="discount") rows.sort((a,b)=> pct(b)-pct(a));
+  if(sortMode==="priceAsc") rows.sort((a,b)=> a.minBid-b.minBid);
+  if(sortMode==="priceDesc") rows.sort((a,b)=> b.minBid-a.minBid);
+
+  document.getElementById('resultCount').textContent = DATA.length + "건";
+  document.getElementById('listLabel').textContent =
+    (activeGu==="전체" ? "전체 아파트 경매" : activeGu + " 아파트 경매") + ` · ${rows.length}건`;
+
+  updatePinDimming();
+
+  const listEl = document.getElementById('list');
+  listEl.innerHTML = "";
+  if(rows.length===0){
+    listEl.innerHTML = `<div class="empty">해당 지역에 진행 중인 아파트 경매가 없습니다.</div>`;
+    return;
+  }
+  rows.forEach(d=>{
+    const t = tier(d);
+    const card = document.createElement('div');
+    card.className = 'card' + (d.id===selectedId ? ' selected' : '');
+    card.id = 'card-'+d.id;
+    const badgeText = t==="hot" ? "고할인" : t==="warm" ? "할인" : "저할인";
+    card.innerHTML = `
+      <div class="card-top">
+        <div>
+          <div class="card-name">${d.name}</div>
+          <div class="card-addr">${d.gu} ${d.dong} · ${d.unit}</div>
+        </div>
+        <div class="badge ${t}">${badgeText} ${pct(d)}%</div>
+      </div>
+      <div class="price-row">
+        <span class="price-now">${won(d.minBid)}</span>
+        <span class="price-orig">감정가 ${won(d.appraisal)}</span>
+      </div>
+      <div class="meta-row">
+        <span>사건 <b>${d.caseNo}</b></span>
+        <span>면적 <b>${d.area}</b></span>
+        <span>유찰 <b>${d.failCount}회</b></span>
+        <span>매각기일 <b>2026.${d.saleDate}</b></span>
+      </div>
+      ${d.tags.length ? `<div class="tags">${d.tags.map(tg=>`<span class="tag">#${tg}</span>`).join('')}</div>` : ''}
+    `;
+    card.onclick = (ev)=>{ ev.stopPropagation(); selectCard(d.id, true); };
+    listEl.appendChild(card);
+  });
+}
+
+function selectCard(id, showOnMap){
+  selectedId = id;
+  const d = DATA.find(x=>x.id===id);
+  render();
+  if(showOnMap && d) showTip(d);
+  const elc = document.getElementById('card-'+id);
+  if(elc) elc.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+loadData();
 </script>
 </body>
 </html>
