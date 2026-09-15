@@ -132,19 +132,24 @@ def parse_fallback_text(html):
     print(f"[debug] '타경' 사건번호 패턴 매치 수: {len(case_matches)}")
 
     items = []
+    cnt_apt_type = 0
+    cnt_seoul = 0
+    cnt_price_ok = 0
     for m in case_matches:
         case_no = m.group(1)
-        before = text[max(0, m.start() - 30): m.start()]
+        before = text[max(0, m.start() - 60): m.start()]
         after = text[m.end(): m.end() + 450]
 
         # 물건 종류 - "아파트"만 (도시생활주택 등 제외)
         if "아파트" not in before:
             continue
+        cnt_apt_type += 1
 
         # 서울 물건만
-        gu_match = next((gu for gu in SEOUL_GU_LIST if gu in after[:120]), None)
-        if not gu_match or "서울" not in after[:60]:
+        gu_match = next((gu for gu in SEOUL_GU_LIST if gu in after[:150]), None)
+        if not gu_match or "서울" not in after[:150]:
             continue
+        cnt_seoul += 1
 
         # 동 이름 - 괄호 안 첫 항목 "(화양동,신원리브웰...)"
         paren_match = re.search(r"\(([^)]+)\)", after)
@@ -166,7 +171,9 @@ def parse_fallback_text(html):
         appraisal = extract_amount_after_label(after, "감")
         min_bid = extract_amount_after_label(after, "최")
         if not (appraisal and min_bid):
+            print(f"[debug] 가격 파싱 실패 - {case_no}, 주변텍스트: {after[:200]!r}")
             continue
+        cnt_price_ok += 1
 
         fail_match = re.search(r"유찰\s*(\d+)\s*회", after)
         tags = re.findall(r"#([^\s#]+)", after)
@@ -186,6 +193,8 @@ def parse_fallback_text(html):
             "area": area,
             "tags": tags[:4],
         })
+
+    print(f"[debug] 필터 단계별 통과 건수 - 아파트타입: {cnt_apt_type} / 서울: {cnt_seoul} / 가격파싱성공: {cnt_price_ok}")
     return items
 
 
