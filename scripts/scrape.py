@@ -114,47 +114,77 @@ def extract_amount_after_label(window, label):
 def parse_fallback_text(html):
     """
     __NEXT_DATA__가 없는 경우(App Router)의 폴백.
-    화면 텍스트 패턴(예: "아파트 2025타경123456 ... 강남구 ... 감정가 17억 8,000만원 최저가 ...")을
-    정규식으로 추출. 사이트 마크업이 바뀌면 이 부분을 다시 손봐야 할 수 있음.
+    실제 화면 텍스트 구조(사건번호 기준으로 순서대로):
+      아파트                                   <- 물건 종류 (사건번호 "앞")
+      2024타경65255                             <- 사건번호 (앵커)
+      경기도 고양시 ... (행신동,소만마을아파트)   <- 주소 (사건번호 "뒤")
+      토지 31.63 ㎡ (10 평) 건물 59.04 ㎡ (18 평)
+      감 3억7600만원
+      최 178만6000원
+      #유찰15회 #재매각 ...
+      2026.10.06
+    위 순서를 그대로 이용해서 정규식으로 추출.
     """
     text = re.sub(r"<[^>]+>", "\n", html)
     text = re.sub(r"\n{2,}", "\n", text)
 
     case_matches = list(re.finditer(r"(20\d{2}타경\d{3,7})", text))
     print(f"[debug] '타경' 사건번호 패턴 매치 수: {len(case_matches)}")
-    print(f"[debug] '감정가' 등장 횟수: {text.count('감정가')}, '최저가' 등장 횟수: {text.count('최저가')}")
-    if case_matches:
-        sample_start = case_matches[0].start()
-        print(f"[debug] 첫 매치 주변 텍스트:\n{text[max(0,sample_start-100):sample_start+300]}")
 
     items = []
     for m in case_matches:
         case_no = m.group(1)
-        window = text[max(0, m.start() - 300): m.end() + 300]
+        before = text[max(0, m.start() - 30): m.start()]
+        after = text[m.end(): m.end() + 450]
 
-        gu_match = next((gu for gu in SEOUL_GU_LIST if gu in window), None)
-        if not gu_match:
-            continue  # 서울 물건이 아니면 skip
+        # 물건 종류 - "아파트"만 (도시생활주택 등 제외)
+        if "아파트" not in before:
+            continue
 
-        type_match = re.search(r"(아파트)", window)
-        if not type_match:
-            continue  # 아파트만
+        # 서울 물건만
+        gu_match = next((gu for gu in SEOUL_GU_LIST if gu in after[:120]), None)
+        if not gu_match or "서울" not in after[:60]:
+            continue
 
-        appraisal = extract_amount_after_label(window, "감정가")
-        min_bid = extract_amount_after_label(window, "최저가")
-        fail_match = re.search(r"유찰\s*(\d+)\s*회", window)
-        addr_match = re.search(rf"{gu_match}\s*([가-힣0-9]+동)", window)
+        # 동 이름 - 괄호 안 첫 항목 "(화양동,신원리브웰...)"
+        paren_match = re.search(r"\(([^)]+)\)", after)
+        dong, name = "", ""
+        if paren_match:
+            parts = paren_match.group(1).split(",")
+            dong = parts[0].strip()
+            name = parts[1].strip() if len(parts) > 1 else dong
 
+        # 층/호수
+        unit_match = re.search(r"([0-9]+동\s*)?([0-9]+층[0-9]*호)", after)
+        unit = (unit_match.group(0) if unit_match else "").strip()
+
+        # 건물 면적
+        area_match = re.search(r"건물\s*([0-9.]+)\s*㎡\s*\(\s*([0-9]+)\s*평\s*\)", after)
+        area = f"{area_match.group(1)}㎡({area_match.group(2)}평)" if area_match else ""
+
+        # 감정가 / 최저가 - "감" / "최" 한 글자 라벨 + 한글 금액 표기
+        appraisal = extract_amount_after_label(after, "감")
+        min_bid = extract_amount_after_label(after, "최")
         if not (appraisal and min_bid):
             continue
 
+        fail_match = re.search(r"유찰\s*(\d+)\s*회", after)
+        tags = re.findall(r"#([^\s#]+)", after)
+        tags = [t for t in tags if not t.startswith("유찰")]  # 유찰N회는 failCount로 따로 뺐으니 태그에서 제외
+        date_match = re.search(r"(20\d{2}\.\d{2}\.\d{2})", after)
+
         items.append({
             "caseNo": case_no,
+            "name": name or f"{dong} 아파트",
+            "unit": unit,
             "gu": gu_match,
-            "dong": addr_match.group(1) if addr_match else "",
+            "dong": dong,
             "appraisal": appraisal,
             "minBid": min_bid,
             "failCount": int(fail_match.group(1)) if fail_match else 0,
+            "saleDate": date_match.group(1)[5:] if date_match else "",
+            "area": area,
+            "tags": tags[:4],
         })
     return items
 
