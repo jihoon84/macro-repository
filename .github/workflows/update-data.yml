@@ -22,7 +22,9 @@ jobs:
           python-version: "3.11"
 
       - name: 의존성 설치
-        run: pip install requests
+        run: |
+          pip install requests playwright
+          playwright install --with-deps chromium
 
       - name: 스크래퍼 실행
         env:
